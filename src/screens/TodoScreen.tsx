@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { Alert, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,7 +30,7 @@ function keyOf(todo: Todo): string {
 }
 
 export function TodoScreen() {
-  const { state, retry, addTodo, toggleTodo, deleteTodo, restoreTodo } = useTodos();
+  const { state, retry, refresh, addTodo, toggleTodo, deleteTodo, restoreTodo } = useTodos();
   const snackbar = useSnackbar();
   const insets = useSafeAreaInsets();
   const keyboard = useReanimatedKeyboardAnimation();
@@ -43,8 +43,51 @@ export function TodoScreen() {
   // (closing and reopening would make the keyboard bounce).
   const fabHeld = useRef(false);
   const addFailedMessageId = useRef<number | null>(null);
+  const undoMessageId = useRef<number | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const { show, dismiss } = snackbar;
+
+  async function reload() {
+    setRefreshing(true);
+
+    try {
+      await refresh();
+
+      // Undo could now put back a task that duplicates one from the server.
+      if (undoMessageId.current !== null) dismiss(undoMessageId.current);
+    } catch {
+      // RETRY reloads straight away: the user already chose to replace their changes.
+      show("Couldn't refresh", { label: 'RETRY', onPress: () => void reload() });
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  function onPullToRefresh() {
+    if (state.status !== 'ready') return;
+
+    if (!state.hasLocalChanges) {
+      void reload();
+
+      return;
+    }
+
+    // Keep the spinner up while the user decides.
+    setRefreshing(true);
+
+    const cancel = () => setRefreshing(false);
+
+    Alert.alert(
+      'Reload tasks?',
+      'This replaces your changes with the original tasks from the server.',
+      [
+        { text: 'Cancel', style: 'cancel', onPress: cancel },
+        { text: 'Reload', style: 'destructive', onPress: () => void reload() },
+      ],
+      { cancelable: true, onDismiss: cancel },
+    );
+  }
 
   function openDraft() {
     listRef.current?.scrollToOffset({ offset: 0, animated: true });
@@ -78,7 +121,7 @@ export function TodoScreen() {
       if (removed === null) return;
 
       // A newer delete replaces this message, so only the latest deletion can be undone.
-      show('Task deleted', {
+      undoMessageId.current = show('Task deleted', {
         label: 'UNDO',
         onPress: () => restoreTodo(removed),
       });
@@ -126,6 +169,14 @@ export function TodoScreen() {
           ListEmptyComponent={EmptyState}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onPullToRefresh}
+              colors={[colors.brand]}
+              tintColor={colors.brand}
+            />
+          }
           contentContainerStyle={[
             styles.listContent,
             // Room to scroll the last task above the + button.
