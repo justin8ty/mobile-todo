@@ -13,6 +13,7 @@ import { LoadingState } from '../components/LoadingState';
 import { Snackbar } from '../components/Snackbar';
 import { TodoRow } from '../components/TodoRow';
 import { useSnackbar } from '../hooks/useSnackbar';
+import { useSwipeHint } from '../hooks/useSwipeHint';
 import { useTodos } from '../hooks/useTodos';
 import { colors, gutter } from '../theme';
 
@@ -47,6 +48,9 @@ export function TodoScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const { show, dismiss } = snackbar;
+
+  const firstId = state.status === 'ready' ? (state.todos[0]?.id ?? null) : null;
+  const { hint, onTaskAdded, onSwiped } = useSwipeHint(firstId);
 
   async function reload() {
     setRefreshing(true);
@@ -102,7 +106,9 @@ export function TodoScreen() {
 
   const onAdded = useCallback(() => {
     if (addFailedMessageId.current !== null) dismiss(addFailedMessageId.current);
-  }, [dismiss]);
+
+    onTaskAdded();
+  }, [dismiss, onTaskAdded]);
 
   const onAddFailed = useCallback(
     (retryAdd: () => void) => {
@@ -130,8 +136,16 @@ export function TodoScreen() {
   );
 
   const renderTodo: ListRenderItem<Todo> = useCallback(
-    ({ item }) => <TodoRow todo={item} onToggle={toggleTodo} onDelete={onDelete} />,
-    [toggleTodo, onDelete],
+    ({ item }) => (
+      <TodoRow
+        todo={item}
+        onToggle={toggleTodo}
+        onDelete={onDelete}
+        onSwipe={onSwiped}
+        hintKey={hint?.id === item.id ? hint.key : null}
+      />
+    ),
+    [toggleTodo, onDelete, onSwiped, hint],
   );
 
   // Keyboard height is negative while open; the safe-area inset is already below the keyboard.
