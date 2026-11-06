@@ -10,6 +10,8 @@ export const colors = {
   muted: '#A3A9BB',
   line: '#C3C9DA',
   danger: '#D93A3A',
+  // Pressed background for full-width rows.
+  wash: '#F3F4F8',
 } as const;
 
 // Horizontal inset shared by the header and rows, so checkboxes line up under the title.

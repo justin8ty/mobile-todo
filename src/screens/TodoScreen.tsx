@@ -16,16 +16,19 @@ import type { Todo } from '../types';
 
 const NO_TODOS: Todo[] = [];
 
-const renderTodo: ListRenderItem<Todo> = ({ item }) => <TodoRow todo={item} />;
-
 function keyOf(todo: Todo): string {
   return String(todo.id);
 }
 
 export function TodoScreen() {
-  const { state, retry } = useTodos();
+  const { state, retry, toggleTodo } = useTodos();
   const insets = useSafeAreaInsets();
   const onRetry = useCallback(() => void retry(), [retry]);
+
+  const renderTodo: ListRenderItem<Todo> = useCallback(
+    ({ item }) => <TodoRow todo={item} onToggle={toggleTodo} />,
+    [toggleTodo],
+  );
 
   let body: ReactNode;
 

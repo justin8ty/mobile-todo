@@ -1,19 +1,35 @@
 import { memo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 
+import { tapHaptic } from '../haptics';
 import { colors, gutter, typography } from '../theme';
 import { Checkbox } from './Checkbox';
 
 import type { Todo } from '../types';
 
-type Props = { todo: Todo };
+type Props = { todo: Todo; onToggle: (id: number) => void };
 
-export const TodoRow = memo(function TodoRow({ todo }: Props) {
+export const TodoRow = memo(function TodoRow({ todo, onToggle }: Props) {
+  function toggle() {
+    tapHaptic();
+    onToggle(todo.id);
+  }
+
   return (
-    <View style={styles.row}>
-      <Checkbox checked={todo.completed} />
-      <Text style={[styles.title, todo.completed && styles.completed]}>{todo.title}</Text>
-    </View>
+    <Pressable
+      onPress={toggle}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: todo.completed }}
+      accessibilityLabel={todo.title}
+      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+    >
+      {({ pressed }) => (
+        <>
+          <Checkbox checked={todo.completed} pressed={pressed} />
+          <Text style={[styles.title, todo.completed && styles.completed]}>{todo.title}</Text>
+        </>
+      )}
+    </Pressable>
   );
 });
 
@@ -25,6 +41,10 @@ const styles = StyleSheet.create({
     minHeight: 50,
     paddingHorizontal: gutter,
     paddingVertical: 14,
+    backgroundColor: colors.bg,
+  },
+  pressed: {
+    backgroundColor: colors.wash,
   },
   title: {
     ...typography.row,
