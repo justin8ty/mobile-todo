@@ -1,25 +1,31 @@
 import * as Haptics from 'expo-haptics';
-import { Platform } from 'react-native';
+import { Platform, Vibration } from 'react-native';
 
 /**
- * Haptics are a nicety: a device that can't play one must never break the interaction.
- * Android uses the system haptic constants (no vibrate permission, matches the OS feel);
- * the ones chosen here exist on every Android version.
+ * Android drives the vibrator directly. expo-haptics can't be used there in Expo Go:
+ * `performAndroidHapticsAsync` silently does nothing (https://github.com/expo/expo/issues/49262),
+ * and `impactAsync` pulses are too weak to feel on some phones (e.g. Samsung). Pulses
+ * of 40ms or less didn't register on a Samsung device; 60ms did.
  */
-function play(android: Haptics.AndroidHaptics, ios: () => Promise<void>) {
-  const pending = Platform.OS === 'android' ? Haptics.performAndroidHapticsAsync(android) : ios();
+const ANDROID_PULSE_MS = 60;
 
-  pending.catch(() => {});
+/** Haptics are a nicety: a device that can't play one must never break the interaction. */
+function play(ios: () => Promise<void>) {
+  if (Platform.OS === 'android') {
+    Vibration.vibrate(ANDROID_PULSE_MS);
+
+    return;
+  }
+
+  ios().catch(() => {});
 }
 
 /** Toggling a task. */
 export function tapHaptic() {
-  play(Haptics.AndroidHaptics.Virtual_Key, () =>
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
-  );
+  play(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
 }
 
 /** A swipe crossing the point where releasing would delete. */
 export function thresholdHaptic() {
-  play(Haptics.AndroidHaptics.Clock_Tick, () => Haptics.selectionAsync());
+  play(() => Haptics.selectionAsync());
 }
