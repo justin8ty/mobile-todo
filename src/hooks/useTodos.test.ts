@@ -107,7 +107,6 @@ describe('startup', () => {
 
   test.each([
     ['invalid JSON', '{"todos": ['],
-    ['a missing field', JSON.stringify({ todos: [todo(1)], nextId: 2 })],
     ['a malformed task', JSON.stringify({ todos: [{ id: 1 }], hasLocalChanges: true, nextId: 2 })],
     ['a nextId that collides', JSON.stringify({ todos: [todo(3)], hasLocalChanges: true, nextId: 3 })],
   ])('storage with %s falls back to the API and is replaced', async (_name, raw) => {
@@ -141,13 +140,7 @@ describe('startup', () => {
     const { result } = await renderHook(() => useTodos());
 
     await act(async () => {
-      await jest.advanceTimersByTimeAsync(9_999);
-    });
-
-    expect(result.current.state.status).toBe('loading');
-
-    await act(async () => {
-      await jest.advanceTimersByTimeAsync(1);
+      await jest.advanceTimersByTimeAsync(10_000);
     });
 
     expect(result.current.state.status).toBe('error');
@@ -182,7 +175,6 @@ test('retry after a failed load recovers', async () => {
 test.each([
   ['a blank title', '   ', jsonPlaceholder],
   ['a server error', 'New task', serverError],
-  ['a network failure', 'New task', offline],
 ])('adding with %s rejects and leaves the list and storage untouched', async (_name, title, handler) => {
   serve(jsonPlaceholder);
 

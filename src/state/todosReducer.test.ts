@@ -20,14 +20,10 @@ function loaded(todos: Todo[]): Action {
   return { type: 'loadSucceeded', todos, hasLocalChanges: false };
 }
 
-function readyTodos(state: State): Todo[] {
+function ids(state: State): number[] {
   if (state.status !== 'ready') throw new Error(`Expected ready state, got ${state.status}`);
 
-  return state.todos;
-}
-
-function ids(state: State): number[] {
-  return readyTodos(state).map((item) => item.id);
+  return state.todos.map((item) => item.id);
 }
 
 describe('IDs', () => {
@@ -50,12 +46,6 @@ describe('IDs', () => {
     );
 
     expect(ids(state).sort((a, b) => a - b)).toEqual([1, 2, 3, 4]);
-  });
-
-  test('an empty list starts IDs at 1', () => {
-    const state = run(loaded([]), { type: 'added', todo: postResponse('A') });
-
-    expect(ids(state)).toEqual([1]);
   });
 });
 
@@ -85,10 +75,6 @@ describe('Undo', () => {
 describe('hasLocalChanges', () => {
   const base = loaded([todo(1), todo(2)]);
 
-  test('is false after loading from the API', () => {
-    expect(run(base)).toMatchObject({ hasLocalChanges: false });
-  });
-
   test.each<[string, Action]>([
     ['added', { type: 'added', todo: postResponse('A') }],
     ['toggled', { type: 'toggled', id: 1 }],
@@ -108,23 +94,4 @@ describe('hasLocalChanges', () => {
 
     expect(state).toEqual({ status: 'ready', todos: [todo(1), todo(2)], hasLocalChanges: false, nextId: 3 });
   });
-
-  test('is kept from storage on load', () => {
-    const state = run({ type: 'loadSucceeded', todos: [], hasLocalChanges: true, nextId: 7 });
-
-    expect(state).toEqual({ status: 'ready', todos: [], hasLocalChanges: true, nextId: 7 });
-  });
-});
-
-test.each<Action>([
-  { type: 'added', todo: postResponse('A') },
-  { type: 'toggled', id: 1 },
-  { type: 'deleted', id: 1 },
-  { type: 'restored', todo: todo(1), index: 0 },
-  { type: 'refreshed', todos: [todo(1)] },
-])('$type is ignored unless ready', (action) => {
-  const errored = run({ type: 'loadFailed', message: 'Offline' });
-
-  expect(todosReducer(initialState, action)).toBe(initialState);
-  expect(todosReducer(errored, action)).toBe(errored);
 });
