@@ -1,7 +1,7 @@
-import { useCallback, useRef, useState } from 'react';
-import { Alert, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, RefreshControl, StyleSheet, View } from 'react-native';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
-import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import Animated, { LinearTransition, useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DraftRow } from '../components/DraftRow';
@@ -18,16 +18,47 @@ import { useTodos } from '../hooks/useTodos';
 import { colors, gutter } from '../theme';
 
 import type { ReactNode } from 'react';
-import type { ListRenderItem, TextInputInstance } from 'react-native';
+import type { FlatList, ListRenderItem, TextInputInstance } from 'react-native';
 import type { Todo } from '../types';
 
 const NO_TODOS: Todo[] = [];
+const NO_IDS: ReadonlySet<number> = new Set();
+
+// Remaining rows (and the + button, when the snackbar appears) glide into their new place.
+const LAYOUT = LinearTransition.springify().damping(20).stiffness(220);
 
 // Gap between the bottom controls and the safe-area edge or keyboard.
 const BOTTOM_GAP = 16;
 
 function keyOf(todo: Todo): string {
   return String(todo.id);
+}
+
+/**
+ * IDs in `todos` that weren't in the previous list: tasks just added, restored or refreshed.
+ * Only these animate in, not rows mounting at launch or as the list scrolls.
+ */
+function useInsertedIds(todos: Todo[] | null): ReadonlySet<number> {
+  const previous = useRef<Todo[] | null>(null);
+
+  useEffect(() => {
+    previous.current = todos;
+  }, [todos]);
+
+  return useMemo(() => {
+    const before = previous.current;
+
+    if (todos === null || before === null) return NO_IDS;
+
+    const known = new Set(before.map((todo) => todo.id));
+    const inserted = new Set<number>();
+
+    for (const todo of todos) {
+      if (!known.has(todo.id)) inserted.add(todo.id);
+    }
+
+    return inserted;
+  }, [todos]);
 }
 
 export function TodoScreen() {
@@ -51,6 +82,7 @@ export function TodoScreen() {
 
   const firstId = state.status === 'ready' ? (state.todos[0]?.id ?? null) : null;
   const { hint, onTaskAdded, onSwiped } = useSwipeHint(firstId);
+  const insertedIds = useInsertedIds(state.status === 'ready' ? state.todos : null);
 
   async function reload() {
     setRefreshing(true);
@@ -143,14 +175,17 @@ export function TodoScreen() {
         onDelete={onDelete}
         onSwipe={onSwiped}
         hintKey={hint?.id === item.id ? hint.key : null}
+        animateIn={insertedIds.has(item.id)}
       />
     ),
-    [toggleTodo, onDelete, onSwiped, hint],
+    [toggleTodo, onDelete, onSwiped, hint, insertedIds],
   );
 
-  // Keyboard height is negative while open; the safe-area inset is already below the keyboard.
+  // Sits above the keyboard when open (its height is negative), else above the safe area.
+  // Padding rather than a transform: touches follow layout, not transforms, so the
+  // snackbar's action and the + button stay tappable while lifted.
   const liftStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: Math.min(0, keyboard.height.value + insets.bottom) }],
+    paddingBottom: Math.max(insets.bottom, -keyboard.height.value) + BOTTOM_GAP,
   }));
 
   let body: ReactNode;
@@ -164,8 +199,9 @@ export function TodoScreen() {
       break;
     case 'ready':
       body = (
-        <FlatList
+        <Animated.FlatList
           ref={listRef}
+          itemLayoutAnimation={LAYOUT}
           data={state.todos}
           keyExtractor={keyOf}
           renderItem={renderTodo}
@@ -206,17 +242,17 @@ export function TodoScreen() {
       <Header todos={state.status === 'ready' ? state.todos : NO_TODOS} />
       {body}
       <Animated.View
-        style={[styles.bottom, { paddingBottom: insets.bottom + BOTTOM_GAP }, liftStyle]}
+        style={[styles.bottom, liftStyle]}
       >
         {state.status === 'ready' && (
-          <View style={styles.fab}>
+          <Animated.View style={styles.fab}>
             <Fab
               onPress={openDraft}
               onHoldChange={(held) => {
                 fabHeld.current = held;
               }}
             />
-          </View>
+          </Animated.View>
         )}
         {snackbar.message !== null && (
           <Snackbar

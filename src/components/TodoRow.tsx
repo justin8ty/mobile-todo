@@ -1,8 +1,10 @@
 import { memo, useEffect, useRef } from 'react';
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions } from 'react-native';
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
+  FadeIn,
+  FadeOut,
   cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
@@ -32,6 +34,9 @@ const HINT_SLIDE = { duration: 280, easing: Easing.out(Easing.cubic) };
 
 const TRASH_SIZE = 22;
 
+const ENTERING = FadeIn.springify().damping(20).stiffness(220);
+const EXITING = FadeOut.duration(160);
+
 const ACCESSIBILITY_ACTIONS = [{ name: 'delete', label: 'Delete' }];
 
 type Props = {
@@ -42,6 +47,8 @@ type Props = {
   onSwipe: () => void;
   /** Changing this to a new number plays the swipe hint; `null` means no hint. */
   hintKey: number | null;
+  /** Read on mount: whether the row fades in (a new task) or just appears (launch, scrolling). */
+  animateIn: boolean;
 };
 
 export const TodoRow = memo(function TodoRow({
@@ -50,6 +57,7 @@ export const TodoRow = memo(function TodoRow({
   onDelete,
   onSwipe,
   hintKey,
+  animateIn,
 }: Props) {
   const { width } = useWindowDimensions();
   const offset = useSharedValue(0);
@@ -122,7 +130,7 @@ export const TodoRow = memo(function TodoRow({
   }
 
   return (
-    <View>
+    <Animated.View entering={animateIn ? ENTERING : undefined} exiting={EXITING}>
       <Animated.View style={[styles.underlay, underlayStyle]}>
         <Animated.View style={trashStyle}>
           <TrashIcon />
@@ -150,7 +158,7 @@ export const TodoRow = memo(function TodoRow({
           </Pressable>
         </Animated.View>
       </GestureDetector>
-    </View>
+    </Animated.View>
   );
 });
 

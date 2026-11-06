@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput } from 'react-native';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { colors, gutter, typography } from '../theme';
 import { Checkbox } from './Checkbox';
@@ -62,7 +63,7 @@ export function DraftRow({ inputRef, onAdd, onAdded, onAddFailed, onBlurEmpty }:
   const canSubmit = title.trim() !== '';
 
   return (
-    <View style={styles.row}>
+    <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(120)} style={styles.row}>
       <Checkbox checked={false} />
       <TextInput
         ref={inputRef}
@@ -98,7 +99,7 @@ export function DraftRow({ inputRef, onAdd, onAdded, onAddFailed, onBlurEmpty }:
           )}
         </Pressable>
       )}
-    </View>
+    </Animated.View>
   );
 }
 
