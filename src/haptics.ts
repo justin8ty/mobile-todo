@@ -5,9 +5,9 @@ import { Platform, Vibration } from 'react-native';
  * Android drives the vibrator directly. expo-haptics can't be used there in Expo Go:
  * `performAndroidHapticsAsync` silently does nothing (https://github.com/expo/expo/issues/49262),
  * and `impactAsync` pulses are too weak to feel on some phones (e.g. Samsung). Pulses
- * of 40ms or less didn't register on a Samsung device; 60ms did.
+ * of 40ms or less didn't register on a Samsung device and 60ms felt weak.
  */
-const ANDROID_PULSE_MS = 60;
+const ANDROID_PULSE_MS = 100;
 
 /** Haptics are a nicety: a device that can't play one must never break the interaction. */
 function play(ios: () => Promise<void>) {
