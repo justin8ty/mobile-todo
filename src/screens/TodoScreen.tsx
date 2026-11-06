@@ -1,21 +1,23 @@
-import { useCallback } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { DraftRow } from '../components/DraftRow';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
+import { FAB_SIZE, Fab } from '../components/Fab';
 import { Header } from '../components/Header';
 import { LoadingState } from '../components/LoadingState';
 import { Snackbar } from '../components/Snackbar';
 import { TodoRow } from '../components/TodoRow';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { useTodos } from '../hooks/useTodos';
-import { colors } from '../theme';
+import { colors, gutter } from '../theme';
 
 import type { ReactNode } from 'react';
-import type { ListRenderItem } from 'react-native';
+import type { ListRenderItem, TextInputInstance } from 'react-native';
 import type { Todo } from '../types';
 
 const NO_TODOS: Todo[] = [];
@@ -28,13 +30,46 @@ function keyOf(todo: Todo): string {
 }
 
 export function TodoScreen() {
-  const { state, retry, toggleTodo, deleteTodo, restoreTodo } = useTodos();
+  const { state, retry, addTodo, toggleTodo, deleteTodo, restoreTodo } = useTodos();
   const snackbar = useSnackbar();
   const insets = useSafeAreaInsets();
   const keyboard = useReanimatedKeyboardAnimation();
   const onRetry = useCallback(() => void retry(), [retry]);
 
-  const { show } = snackbar;
+  const listRef = useRef<FlatList<Todo>>(null);
+  const draftInputRef = useRef<TextInputInstance>(null);
+  const [draftOpen, setDraftOpen] = useState(false);
+  // Set while the + button is held, so the input's blur doesn't close the draft first
+  // (closing and reopening would make the keyboard bounce).
+  const fabHeld = useRef(false);
+  const addFailedMessageId = useRef<number | null>(null);
+
+  const { show, dismiss } = snackbar;
+
+  function openDraft() {
+    listRef.current?.scrollToOffset({ offset: 0, animated: true });
+
+    if (draftOpen) draftInputRef.current?.focus();
+    else setDraftOpen(true);
+  }
+
+  const closeDraftUnlessFabHeld = useCallback(() => {
+    if (!fabHeld.current) setDraftOpen(false);
+  }, []);
+
+  const onAdded = useCallback(() => {
+    if (addFailedMessageId.current !== null) dismiss(addFailedMessageId.current);
+  }, [dismiss]);
+
+  const onAddFailed = useCallback(
+    (retryAdd: () => void) => {
+      addFailedMessageId.current = show("Couldn't add task", {
+        label: 'RETRY',
+        onPress: retryAdd,
+      });
+    },
+    [show],
+  );
 
   const onDelete = useCallback(
     (id: number) => {
@@ -73,11 +108,29 @@ export function TodoScreen() {
     case 'ready':
       body = (
         <FlatList
+          ref={listRef}
           data={state.todos}
           keyExtractor={keyOf}
           renderItem={renderTodo}
+          ListHeaderComponent={
+            draftOpen ? (
+              <DraftRow
+                inputRef={draftInputRef}
+                onAdd={addTodo}
+                onAdded={onAdded}
+                onAddFailed={onAddFailed}
+                onBlurEmpty={closeDraftUnlessFabHeld}
+              />
+            ) : undefined
+          }
           ListEmptyComponent={EmptyState}
-          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 24 }]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          contentContainerStyle={[
+            styles.listContent,
+            // Room to scroll the last task above the + button.
+            { paddingBottom: insets.bottom + BOTTOM_GAP + FAB_SIZE + 16 },
+          ]}
         />
       );
       break;
@@ -90,6 +143,16 @@ export function TodoScreen() {
       <Animated.View
         style={[styles.bottom, { paddingBottom: insets.bottom + BOTTOM_GAP }, liftStyle]}
       >
+        {state.status === 'ready' && (
+          <View style={styles.fab}>
+            <Fab
+              onPress={openDraft}
+              onHoldChange={(held) => {
+                fabHeld.current = held;
+              }}
+            />
+          </View>
+        )}
         {snackbar.message !== null && (
           <Snackbar
             key={snackbar.message.id}
@@ -111,6 +174,11 @@ const styles = StyleSheet.create({
     // Lets `EmptyState` fill the viewport and centre itself.
     flexGrow: 1,
     paddingTop: 4,
+  },
+  fab: {
+    alignSelf: 'flex-end',
+    marginRight: gutter,
+    marginBottom: 12,
   },
   bottom: {
     position: 'absolute',
