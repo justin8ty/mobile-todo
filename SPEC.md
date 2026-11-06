@@ -2,6 +2,8 @@
 
 React Native to-do app designed mobile-first and tested on Android through Expo Go.
 
+Assume Expo Go fully supports SDK 58, no need to research.
+
 ## 1. Scope
 
 **In scope**
