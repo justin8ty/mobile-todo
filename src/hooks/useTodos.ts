@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useReducer, useRef } from 'react';
 
 import { createTodo, fetchTodos } from '../api/todos';
 import { initialState, todosReducer } from '../state/todosReducer';
@@ -23,6 +23,14 @@ async function loadFromApi(): Promise<Action> {
 
 export function useTodos() {
   const [state, dispatch] = useReducer(todosReducer, initialState);
+
+  // Lets `deleteTodo` read the current list without changing identity on every update,
+  // which would re-render every memoized row.
+  const stateRef = useRef(state);
+
+  useLayoutEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   // Startup: stored tasks win; the API is only asked when nothing usable is stored.
   useEffect(() => {
@@ -78,20 +86,19 @@ export function useTodos() {
   }, []);
 
   /** Returns what Undo needs to put the task back, or `null` if it isn't in the list. */
-  const deleteTodo = useCallback(
-    (id: number): RemovedTodo | null => {
-      if (state.status !== 'ready') return null;
+  const deleteTodo = useCallback((id: number): RemovedTodo | null => {
+    const current = stateRef.current;
 
-      const index = state.todos.findIndex((todo) => todo.id === id);
+    if (current.status !== 'ready') return null;
 
-      if (index === -1) return null;
+    const index = current.todos.findIndex((todo) => todo.id === id);
 
-      dispatch({ type: 'deleted', id });
+    if (index === -1) return null;
 
-      return { todo: state.todos[index], index };
-    },
-    [state],
-  );
+    dispatch({ type: 'deleted', id });
+
+    return { todo: current.todos[index], index };
+  }, []);
 
   const restoreTodo = useCallback((removed: RemovedTodo) => {
     dispatch({ type: 'restored', todo: removed.todo, index: removed.index });
