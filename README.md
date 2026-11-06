@@ -13,7 +13,7 @@ pnpm install
 pnpm start
 ```
 
-Scan the QR code with Expo Go. Your phone and computer must be on the same network.
+`pnpm start` prints a QR code in the terminal. Scan it with Expo Go (Android) or the Camera app (iOS). Your phone and computer must be on the same Wi-Fi; if the app doesn't load, run `pnpm start --tunnel` instead.
 
 ## Usage
 
