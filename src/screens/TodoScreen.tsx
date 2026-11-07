@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, RefreshControl, StyleSheet, View } from 'react-native';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
-import Animated, { FadeIn, FadeOut, LinearTransition, useAnimatedStyle } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DraftRow } from '../components/DraftRow';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { FAB_SIZE, Fab } from '../components/Fab';
+import { FilterPage } from '../components/FilterPage';
+import { FILTERS } from '../components/FilterTabs';
 import { Header } from '../components/Header';
 import { LoadingState } from '../components/LoadingState';
 import { Snackbar } from '../components/Snackbar';
@@ -100,6 +108,8 @@ export function TodoScreen() {
   const undoMessageId = useRef<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<Filter>('all');
+  // Starts at 0 so the first page appears without sliding in.
+  const pageDirection = useSharedValue(0);
 
   const { show, dismiss } = snackbar;
 
@@ -187,14 +197,22 @@ export function TodoScreen() {
     }
 
     // The new task goes to the top of the full list, so show all of it.
-    setFilter('all');
+    changeFilter('all');
     listRef.current?.scrollToOffset({ offset: 0, animated: true });
     draft.startNew();
   }
 
+  function changeFilter(next: Filter) {
+    if (next === filter) return;
+
+    // Set before the swap: the leaving page reads it as it unmounts.
+    pageDirection.value = Math.sign(FILTERS.indexOf(next) - FILTERS.indexOf(filter));
+    setFilter(next);
+  }
+
   function onFilterChange(next: Filter) {
     draft.dismiss();
-    setFilter(next);
+    changeFilter(next);
   }
 
   const onEdit = useCallback(
@@ -279,45 +297,47 @@ export function TodoScreen() {
       break;
     case 'ready':
       body = (
-        <Animated.FlatList
-          ref={listRef}
-          itemLayoutAnimation={LAYOUT}
-          data={visibleTodos}
-          keyExtractor={keyOf}
-          renderItem={renderTodo}
-          ListHeaderComponent={
-            draft.target?.kind === 'new' ? (
-              <Animated.View entering={DRAFT_IN} exiting={DRAFT_OUT}>
-                <DraftRow
-                  title={draft.title}
-                  checked={false}
-                  placeholder="New task"
-                  label="New task title"
-                  onChangeTitle={changeTitle}
-                  onSubmit={submit}
-                  onDismiss={dismissDraft}
-                />
-              </Animated.View>
-            ) : undefined
-          }
-          ListEmptyComponent={emptyState(state.todos, filter)}
-          // While the form is open, a tap anywhere in the list (rows included) only dismisses it.
-          keyboardShouldPersistTaps="never"
-          keyboardDismissMode="on-drag"
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onPullToRefresh}
-              colors={[colors.brand]}
-              tintColor={colors.brand}
-            />
-          }
-          contentContainerStyle={[
-            styles.listContent,
-            // Room to scroll the last task above the + button.
-            { paddingBottom: insets.bottom + BOTTOM_GAP + FAB_SIZE + 16 },
-          ]}
-        />
+        <FilterPage key={filter} direction={pageDirection}>
+          <Animated.FlatList
+            ref={listRef}
+            itemLayoutAnimation={LAYOUT}
+            data={visibleTodos}
+            keyExtractor={keyOf}
+            renderItem={renderTodo}
+            ListHeaderComponent={
+              draft.target?.kind === 'new' ? (
+                <Animated.View entering={DRAFT_IN} exiting={DRAFT_OUT}>
+                  <DraftRow
+                    title={draft.title}
+                    checked={false}
+                    placeholder="New task"
+                    label="New task title"
+                    onChangeTitle={changeTitle}
+                    onSubmit={submit}
+                    onDismiss={dismissDraft}
+                  />
+                </Animated.View>
+              ) : undefined
+            }
+            ListEmptyComponent={emptyState(state.todos, filter)}
+            // While the form is open, a tap anywhere in the list (rows included) only dismisses it.
+            keyboardShouldPersistTaps="never"
+            keyboardDismissMode="on-drag"
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onPullToRefresh}
+                colors={[colors.brand]}
+                tintColor={colors.brand}
+              />
+            }
+            contentContainerStyle={[
+              styles.listContent,
+              // Room to scroll the last task above the + button.
+              { paddingBottom: insets.bottom + BOTTOM_GAP + FAB_SIZE + 16 },
+            ]}
+          />
+        </FilterPage>
       );
       break;
   }

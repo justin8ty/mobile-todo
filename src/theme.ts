@@ -1,3 +1,5 @@
+import { Easing } from 'react-native-reanimated';
+
 import type { TextStyle } from 'react-native';
 
 export const colors = {
@@ -18,6 +20,9 @@ export const colors = {
 
 // Horizontal inset shared by the header and rows, so checkboxes line up under the title.
 export const gutter = 24;
+
+// Switching filters: the list pages and the tab indicator move together.
+export const pageTiming = { duration: 280, easing: Easing.out(Easing.cubic) };
 
 // Family names registered by `useFonts` from @expo-google-fonts/overpass.
 export const fonts = {
