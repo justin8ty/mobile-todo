@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, RefreshControl, StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, {
   FadeIn,
@@ -10,6 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BounceList } from '../components/BounceList';
 import { DraftRow } from '../components/DraftRow';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
@@ -288,8 +289,10 @@ export function TodoScreen() {
     case 'ready':
       body = (
         <FilterPage key={filter} direction={pageDirection}>
-          <Animated.FlatList
+          <BounceList
             ref={listRef}
+            refreshing={refreshing}
+            onRefresh={onPullToRefresh}
             itemLayoutAnimation={LAYOUT}
             data={visibleTodos}
             keyExtractor={keyOf}
@@ -313,18 +316,8 @@ export function TodoScreen() {
             // While the form is open, a tap anywhere in the list (rows included) only dismisses it.
             keyboardShouldPersistTaps="never"
             keyboardDismissMode="on-drag"
-            // iOS-like feel on Android: flings glide further (Android's default is 0.985, which
-            // stops short), and the native overscroll stretch shows even when the list fits.
+            // iOS-like flings that glide further (Android's default, 0.985, stops short).
             decelerationRate={0.99}
-            overScrollMode="always"
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onPullToRefresh}
-                colors={[colors.brand]}
-                tintColor={colors.brand}
-              />
-            }
             contentContainerStyle={[
               styles.listContent,
               // Room to scroll the last task above the + button.

@@ -152,7 +152,13 @@ One screen. Layout from top to bottom: header, list (with the draft row above th
 - Tapping + switches to All first, so the new task is visible.
 - The swipe hint plays on the first visible row. Undo restores by the task's index in the full list.
 
+**Scrolling and bounce** (`BounceList`)
+- Dragged past either end, the list follows the finger with iOS's rubber-band resistance and springs back on release, even when every task fits. Android's overscroll stretch is off, since it's barely visible and Android's `RefreshControl` claims the top edge.
+- Built with a vertical Gesture Handler `Pan` (`activeOffsetY`, `failOffsetX`, so it never competes with a row's swipe) running alongside the list's Gesture Handler `ScrollView` (`simultaneousWith`). The pan only moves the list while it's at an edge.
+- Flings glide further than Android's default (`decelerationRate` 0.99).
+
 **Pull-to-refresh** (list and empty state)
+- Built on the bounce: pulling down past 80px (after resistance) plays a haptic, and releasing there refreshes. While refreshing, the list rests 64px down with a spinner above it.
 - If `hasLocalChanges` is true, an Alert asks first: "Reload tasks?" / "This replaces your changes with the original tasks from the server." with Cancel and Reload. Cancel stops the spinner and changes nothing.
 - Reload calls `GET`. On success, dispatch `refreshed` and cancel any pending Undo (its task could duplicate one from the server). On failure, keep the current list and show the snackbar "Couldn't refresh · RETRY". RETRY reloads immediately, without asking again.
 
@@ -208,7 +214,7 @@ src/
   screens/TodoScreen.tsx     picks the state view, wires list, + button, snackbar
   components/
     Header.tsx  TodoRow.tsx  DraftRow.tsx  Checkbox.tsx
-    Fab.tsx  Snackbar.tsx  FilterTabs.tsx
+    Fab.tsx  Snackbar.tsx  FilterTabs.tsx  FilterPage.tsx  BounceList.tsx
     LoadingState.tsx  ErrorState.tsx  EmptyState.tsx
   haptics.ts  theme.ts  types.ts
 ```
