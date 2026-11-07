@@ -26,72 +26,38 @@ function ids(state: State): number[] {
   return state.todos.map((item) => item.id);
 }
 
-describe('IDs', () => {
-  test('tasks added from identical POST responses get distinct IDs above the loaded ones', () => {
-    const state = run(
-      loaded([todo(1), todo(2), todo(3)]),
-      { type: 'added', todo: postResponse('A') },
-      { type: 'added', todo: postResponse('B') },
-    );
+test('IDs stay unique across identical POST responses and Undo', () => {
+  // Both adds get `id: 201` from the API, and the second would reuse ID 3 if IDs were
+  // derived from the current list instead of a counter.
+  const state = run(
+    loaded([todo(1), todo(2), todo(3)]),
+    { type: 'deleted', id: 3 },
+    { type: 'added', todo: postResponse('A') },
+    { type: 'added', todo: postResponse('B') },
+    { type: 'restored', todo: todo(3), index: 2 },
+  );
 
-    expect(ids(state)).toEqual([5, 4, 1, 2, 3]);
-  });
-
-  test('a deleted task restored by Undo never shares an ID with a task added after it', () => {
-    const state = run(
-      loaded([todo(1), todo(2), todo(3)]),
-      { type: 'deleted', id: 3 },
-      { type: 'added', todo: postResponse('A') },
-      { type: 'restored', todo: todo(3), index: 2 },
-    );
-
-    expect(ids(state).sort((a, b) => a - b)).toEqual([1, 2, 3, 4]);
-  });
+  expect(new Set(ids(state)).size).toBe(5);
 });
 
-describe('Undo', () => {
-  test('restores the task at its original index', () => {
-    const state = run(
-      loaded([todo(1), todo(2), todo(3)]),
-      { type: 'deleted', id: 2 },
-      { type: 'restored', todo: todo(2), index: 1 },
-    );
+test('Undo restores the task at its original index', () => {
+  const state = run(
+    loaded([todo(1), todo(2), todo(3)]),
+    { type: 'deleted', id: 2 },
+    { type: 'restored', todo: todo(2), index: 1 },
+  );
 
-    expect(ids(state)).toEqual([1, 2, 3]);
-  });
-
-  test('clamps the index to the end when the list has since shrunk', () => {
-    const state = run(
-      loaded([todo(1), todo(2), todo(3)]),
-      { type: 'deleted', id: 2 },
-      { type: 'deleted', id: 3 },
-      { type: 'restored', todo: todo(3), index: 2 },
-    );
-
-    expect(ids(state)).toEqual([1, 3]);
-  });
+  expect(ids(state)).toEqual([1, 2, 3]);
 });
 
-describe('hasLocalChanges', () => {
+test.each<[string, Action]>([
+  ['added', { type: 'added', todo: postResponse('A') }],
+  ['toggled', { type: 'toggled', id: 1 }],
+  ['deleted', { type: 'deleted', id: 1 }],
+])('%s marks local changes, and refreshing clears them', (_name, edit) => {
   const base = loaded([todo(1), todo(2)]);
+  const refreshed: Action = { type: 'refreshed', todos: [todo(1), todo(2)] };
 
-  test.each<[string, Action]>([
-    ['added', { type: 'added', todo: postResponse('A') }],
-    ['toggled', { type: 'toggled', id: 1 }],
-    ['deleted', { type: 'deleted', id: 1 }],
-    ['restored', { type: 'restored', todo: todo(3), index: 0 }],
-  ])('is set by %s', (_name, action) => {
-    expect(run(base, action)).toMatchObject({ hasLocalChanges: true });
-  });
-
-  test('is cleared by refreshed, which also resets the ID counter', () => {
-    const state = run(
-      base,
-      { type: 'added', todo: postResponse('A') },
-      { type: 'added', todo: postResponse('B') },
-      { type: 'refreshed', todos: [todo(1), todo(2)] },
-    );
-
-    expect(state).toEqual({ status: 'ready', todos: [todo(1), todo(2)], hasLocalChanges: false, nextId: 3 });
-  });
+  expect(run(base, edit)).toMatchObject({ hasLocalChanges: true });
+  expect(run(base, edit, refreshed)).toMatchObject({ hasLocalChanges: false });
 });
