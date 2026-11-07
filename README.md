@@ -21,7 +21,7 @@ pnpm start
 - **Complete:** tap a task to toggle it.
 - **Add:** tap **+**, type a title, then tap the **✓** button (where **+** was) or press return. The ✓ stays grey until you type a title. Tap anywhere else to cancel. If adding fails, your text stays; tap **✓** again or **Retry** in the message.
 - **Edit:** long-press a task to edit its title in place, then tap **✓** or press return. Tap anywhere else to cancel and keep the original title.
-- **Filter:** tap **All**, **Active** or **Done** under the title. The badge always counts every task left, whatever the filter.
+- **Filter:** tap **All**, **Active** or **Done** in the bar at the bottom, beside the **+** button. The badge always counts every task left, whatever the filter.
 - **Delete:** swipe a task left. Tap **Undo** within 4 seconds to restore it.
 - **Reload:** pull down on the list to fetch the original tasks again. If you've made changes, you'll be asked to confirm first, since reloading replaces them.
 
