@@ -47,6 +47,15 @@ export function fetchTodos(): Promise<Todo[]> {
   return request('/todos?_limit=10', { method: 'GET' }, isTodoList);
 }
 
+/**
+ * Opens a connection to the API ahead of `createTodo`, so the add only waits for the server, not
+ * for DNS, TCP and TLS too. A bodiless `HEAD` the CDN answers from cache; the connection then stays
+ * pooled for the POST. Failures are ignored: the POST simply connects on its own.
+ */
+export function preconnect(): void {
+  fetch(`${BASE_URL}/todos/1`, { method: 'HEAD' }).catch(() => {});
+}
+
 /** The response always has `id: 201`; callers must assign their own local ID. */
 export function createTodo(title: string): Promise<Todo> {
   return request(

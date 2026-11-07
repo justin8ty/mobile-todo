@@ -93,8 +93,17 @@ function useInsertedIds(todos: Todo[] | null, draftOpen: boolean): ReadonlySet<n
 }
 
 export function TodoScreen() {
-  const { state, retry, refresh, addTodo, toggleTodo, editTodo, deleteTodo, restoreTodo } =
-    useTodos();
+  const {
+    state,
+    retry,
+    refresh,
+    prepareAdd,
+    addTodo,
+    toggleTodo,
+    editTodo,
+    deleteTodo,
+    restoreTodo,
+  } = useTodos();
 
   const snackbar = useSnackbar();
   const insets = useSafeAreaInsets();
@@ -198,6 +207,8 @@ export function TodoScreen() {
     setFilter('all');
     listRef.current?.scrollToOffset({ offset: 0, animated: true });
     draft.startNew();
+    // Connects while the user types, so the tick only waits for the server.
+    prepareAdd();
   }
 
   const onDelete = useCallback(

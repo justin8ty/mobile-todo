@@ -48,6 +48,7 @@ type Todo = { id: number; userId: number; title: string; completed: boolean };
 - `POST /todos` with body `{ title, completed: false, userId: 1 }` adds a task.
 - Toggle, edit and delete never call the API.
 - Requests time out after 10s (`AbortController`); a timeout counts as a failure.
+- Tapping + sends a fire-and-forget `HEAD /todos/1` (answered from the CDN cache) to open a connection while the user types, so the `POST` only waits for the server, not for DNS, TCP and TLS. Its failures are ignored.
 - JSONPlaceholder doesn't save writes, so `GET` always returns the original data.
 
 **Local IDs.** `POST` always responds with `id: 201`. On success, keep the response fields but replace the ID with `nextId`, a counter in state that only increases. It starts at `max(ids) + 1` (or `1` for an empty list), so a deleted task restored by Undo can never collide with a newer one.
@@ -87,7 +88,7 @@ type State =
 `added`, `toggled`, `edited`, `deleted`, `restored` and `refreshed` are ignored unless the status is `ready`.
 
 **Responsibilities**
-- `useTodos` owns the reducer and the effects: loading at startup and saving. It exposes `state`, `addTodo(title)` (a promise that rejects on failure), `toggleTodo`, `editTodo(id, title)`, `deleteTodo` (returns the removed task and its index), `restoreTodo`, `retry` and `refresh`.
+- `useTodos` owns the reducer and the effects: loading at startup and saving. It exposes `state`, `prepareAdd` (the connection warm-up), `addTodo(title)` (a promise that rejects on failure), `toggleTodo`, `editTodo(id, title)`, `deleteTodo` (returns the removed task and its index), `restoreTodo`, `retry` and `refresh`.
 - `useDraft` owns the one open form: its target (a new task, or the ID of the task being edited), its text and the saving flag. The screen wires it to the draft row, the row being edited and the + button. Only one form is open at a time; opening one closes the other.
 - Other UI-only state stays with its owner: the snackbar (`useSnackbar`), the swipe hint (`useSwipeHint`), and the filter and whether a refresh is in progress (the screen).
 

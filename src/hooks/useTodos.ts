@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useReducer, useRef } from 'react';
 
-import { createTodo, fetchTodos } from '../api/todos';
+import { createTodo, fetchTodos, preconnect } from '../api/todos';
 import { initialState, todosReducer } from '../state/todosReducer';
 import * as storage from '../storage/todos';
 
@@ -70,6 +70,11 @@ export function useTodos() {
     });
   }, [state]);
 
+  /** Call when the user starts writing a task, so `addTodo`'s request finds a connection open. */
+  const prepareAdd = useCallback(() => {
+    preconnect();
+  }, []);
+
   /** Rejects when the title is blank or the request fails; the list is unchanged then. */
   const addTodo = useCallback(async (title: string) => {
     const trimmed = title.trim();
@@ -121,5 +126,5 @@ export function useTodos() {
     dispatch({ type: 'refreshed', todos });
   }, []);
 
-  return { state, addTodo, toggleTodo, editTodo, deleteTodo, restoreTodo, retry, refresh };
+  return { state, prepareAdd, addTodo, toggleTodo, editTodo, deleteTodo, restoreTodo, retry, refresh };
 }
