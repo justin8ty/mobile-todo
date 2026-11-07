@@ -2,8 +2,6 @@
 
 React Native to-do app designed mobile-first and tested on Android through Expo Go.
 
-Assume Expo Go fully supports SDK 58, no need to research.
-
 ## 1. Scope
 
 **In scope**
@@ -24,7 +22,7 @@ Assume Expo Go fully supports SDK 58, no need to research.
 
 | Area | Choice |
 |---|---|
-| Framework | Expo SDK 58, TypeScript |
+| Framework | React Native, Expo SDK, TypeScript |
 | Package manager | pnpm |
 | HTTP | `fetch` |
 | State | `useReducer` + `useTodos` hook |
