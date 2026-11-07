@@ -10,6 +10,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.justin8ty.justnaiktodo",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -28,6 +29,12 @@
           "backgroundColor": "#FFFFFF"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "85b29ced-9924-485b-a079-150b6eb3e829"
+      }
+    },
+    "owner": "justin8ty"
   }
 }
