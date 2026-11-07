@@ -141,7 +141,7 @@ One screen. Layout from top to bottom: header, list (with the draft row above th
 - How dismissal is detected: the input's `onBlur` closes the draft. The list uses `keyboardShouldPersistTaps="never"`, so list taps blur it. The screen's root view claims taps nothing else handles (`onStartShouldSetResponder`). The draft row blurs its input on `keyboardDidHide`, because Android's back button hides the keyboard without blurring. The inert tick still takes its touch rather than being `disabled`, because a disabled `Pressable` lets the tap fall through to the root and close the draft.
 
 **Edit (long-press)**
-- Long-pressing a row (Pressable `onLongPress`) plays a light haptic and turns that row into an input holding its title. The input gets focus, with the cursor at the end. Rows also get an accessibility action named "Edit".
+- Long-pressing a row (Pressable `onLongPress`) plays a light haptic. When the finger lifts (`onTouchEnd`), that row turns into an input holding its title. The input gets focus, with the cursor at the end. If a scroll or swipe takes over the touch instead (`onTouchCancel`), the form doesn't open. Rows also get an accessibility action named "Edit", which opens the form directly.
 - It's the same form as Add: the + button becomes the tick, which is grey while the title is blank; the return key also saves; tapping elsewhere, dragging the list or pressing back cancels and keeps the original title.
 - Saving dispatches `edited` and closes the form immediately (no request, no spinner). An unchanged title just closes it.
 - While a row is being edited, its swipe and toggle are off.
@@ -285,6 +285,7 @@ One test per failure mode. Hook tests use `renderHook` with the real reducer and
 12. **Edit by long-press, in place, local only** (over an edit icon, an edit screen, `PATCH /todos/:id`)
     - Benefit: rows stay clean; reuses the draft form and tick button; consistent with toggle and delete being local. A `PATCH` could target the wrong server task, because local IDs can match real server IDs (a local task 11 isn't the server's task 11).
     - Tradeoff: long-press is hidden (the "Edit" accessibility action covers screen readers); no extra API handling to show.
+    - The form opens on release, not when the long press fires. Opening it mid-touch swaps out the view under the finger; on Fabric, the touch end for an unmounted view never reaches JS, so a stale responder swallows the next tap (the tick, which then closes the form unsaved). The haptic still marks the long press.
 
 13. **Filter tabs under the title, not persisted** (over cycling the badge, a persisted filter)
     - Benefit: visible and one tap; each launch starts on All, so nothing looks missing.
