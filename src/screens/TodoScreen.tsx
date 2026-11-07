@@ -22,12 +22,13 @@ import { Snackbar } from '../components/Snackbar';
 import { TodoRow } from '../components/TodoRow';
 import { useDraft } from '../hooks/useDraft';
 import { useSnackbar } from '../hooks/useSnackbar';
+import { useKeyboardReveal } from '../hooks/useKeyboardReveal';
 import { useSwipeHint } from '../hooks/useSwipeHint';
 import { useTodos } from '../hooks/useTodos';
 import { colors, fade, gutter, settle } from '../theme';
 
 import type { ReactElement, ReactNode } from 'react';
-import type { FlatList, ListRenderItem } from 'react-native';
+import type { FlatList, ListRenderItem, ViewInstance } from 'react-native';
 import type { FabMode } from '../components/Fab';
 import type { Filter } from '../components/FilterTabs';
 import type { Todo } from '../types';
@@ -121,6 +122,10 @@ export function TodoScreen() {
   const onRetry = useCallback(() => void retry(), [retry]);
 
   const listRef = useRef<FlatList<Todo>>(null);
+  // The open form's row and the bottom bar: a form must stay above the bar and its fade.
+  const formRef = useRef<ViewInstance>(null);
+  const barRef = useRef<ViewInstance>(null);
+  const keyboardHeight = useKeyboardReveal(listRef, listScrollY, formRef, barRef, FADE_HEIGHT);
   const addFailedMessageId = useRef<number | null>(null);
   const undoMessageId = useRef<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -251,6 +256,7 @@ export function TodoScreen() {
         editor={
           item.id === editingId ? (
             <DraftRow
+              ref={formRef}
               title={draftTitle}
               checked={item.completed}
               placeholder="Task title"
@@ -322,6 +328,7 @@ export function TodoScreen() {
               newDraftOpen ? (
                 <Animated.View entering={APPEAR} exiting={DISAPPEAR}>
                   <DraftRow
+                    ref={formRef}
                     title={draft.title}
                     checked={false}
                     placeholder="New task"
@@ -345,7 +352,8 @@ export function TodoScreen() {
             contentContainerStyle={[
               styles.listContent,
               // Room to scroll the last task clear of the + button and the fade above it.
-              { paddingBottom: fadeHeight },
+              // While the keyboard is up it covers the list too, so the last tasks need that much more.
+              { paddingBottom: fadeHeight + Math.max(0, keyboardHeight - insets.bottom) },
             ]}
           />
         </Animated.View>
@@ -382,7 +390,7 @@ export function TodoScreen() {
         )}
         {state.status === 'ready' && (
           // Within thumb reach; the filters step aside while a form is open, leaving the tick.
-          <View style={styles.bar}>
+          <View ref={barRef} style={styles.bar}>
             {state.todos.length > 0 && draft.target === null && (
               <Animated.View entering={APPEAR} exiting={DISAPPEAR} style={styles.filters}>
                 <FilterTabs selected={filter} onSelect={setFilter} />

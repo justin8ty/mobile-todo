@@ -173,6 +173,7 @@ One screen. Layout from top to bottom: header, list (with the draft row above th
 **Mobile details**
 - `SafeAreaProvider`, with insets applied to the + button and snackbar (Android draws edge-to-edge).
 - On the list: `keyboardShouldPersistTaps="never"` and `keyboardDismissMode="on-drag"` (see Add).
+- The keyboard covers the list rather than resizing it (`useKeyboardReveal`). While it's up, the list's bottom padding grows by the keyboard's height, so the last tasks can scroll above it. Once it has opened, an open form (such as a task edited near the bottom) that sits behind the keyboard, the bottom bar or its fade is scrolled just into view. The form and the bar are both measured on screen.
 - Touch targets at least 48dp, with `hitSlop` on small controls.
 - Pressed feedback on everything tappable.
 - Accessibility labels: rows use `accessibilityRole="checkbox"` with `accessibilityState={{ checked }}` and the title as the label. The + button is labelled "Add task", the tick "Save task" (`disabled` while blank), and the spinner "Saving task".
@@ -215,6 +216,7 @@ src/
   hooks/useDraft.ts          the one open form (new task or edit): target, text, saving
   hooks/useSnackbar.ts
   hooks/useSwipeHint.ts
+  hooks/useKeyboardReveal.ts keeps the open form above the keyboard
   screens/TodoScreen.tsx     picks the state view, wires list, + button, snackbar
   components/
     Header.tsx  ProgressPie.tsx  TodoRow.tsx  DraftRow.tsx  Checkbox.tsx
@@ -266,36 +268,14 @@ One test per failure mode. Hook tests use `renderHook` with the real reducer and
    - Benefit: native gesture; data loss is explicit; no confirm when nothing is lost.
    - Tradeoff: a confirm on a casual gesture is unusual; edits can't survive a refresh.
 
-5. **Swipe-only delete with first-run hint, Undo and an accessibility action** (over trash icon, confirm dialog)
-   - Benefit: clean rows; mobile convention; accidental deletes are recoverable.
-   - Tradeoff: discoverability depends on the hint; custom gesture code.
+5. **+ opens a Things-style draft row at the top and becomes the tick that submits it; the draft closes after each add or a tap elsewhere** (over permanent input, bottom-docked input, staying open for the next task)
+   - Benefit: input never sits under the keyboard; new tasks appear where the user is looking; one button adds a task.
+   - Tradeoff: adding several tasks takes a + tap each; a stray tap discards the text.
 
-6. **+ button opens a draft row at the top, Things-style; the same button becomes the tick that submits it, and the draft closes after each add or when the user taps elsewhere** (over permanent input, bottom-docked input, inline Add button, staying open for the next task)
-   - Benefit: input never sits under the keyboard; new tasks appear where the user is looking; one button in one place adds a task, and the draft only lives while the user is adding.
-   - Tradeoff: the form is hidden until + is tapped; adding several tasks takes a + tap each; a stray tap discards the text; several focus and dismissal edge cases to handle.
+6. **Tests cover the reducer and hooks only; React Native Testing Library just for `renderHook`** (over component tests, or moving hook logic into plain functions)
+   - Benefit: tests target the data-loss, ID and submission failure modes; hooks are tested as shipped; no Reanimated or Gesture Handler mocking.
+   - Tradeoff: UI rules (blank-title tick state, dismissal by tapping elsewhere) are checked manually.
 
-7. **Blank title: tick button greyed out and inert, return key does nothing** (over inline error, Alert)
-   - Benefit: native convention; the disabled state shows why nothing happens; nothing to dismiss.
-
-8. **One snackbar for Undo, add failure and refresh failure** (over Alert, inline errors)
-   - Benefit: non-blocking; Android-native; one component for three cases.
-   - Tradeoff: custom component that must track the keyboard (`react-native-keyboard-controller`, since Reanimated's `useAnimatedKeyboard` is deprecated); messages expire after 4s.
-
-9. **Unreadable or corrupt storage falls back to the API** (over an error screen)
-   - Benefit: launch never crashes or dead-ends.
-   - Tradeoff: local changes in bad data are silently discarded (console warning only).
-
-10. **Swipe hint repeats each launch until the first swipe** (over once ever)
-    - Benefit: users who missed it get another chance to learn swipe-to-delete.
-
-11. **Tests cover the reducer and hooks only; React Native Testing Library just for `renderHook`** (over component tests, or moving hook logic into plain functions)
-    - Benefit: tests target the data-loss, ID and submission failure modes; the hooks are tested as shipped; no Reanimated or Gesture Handler mocking.
-    - Tradeoff: UI rules (blank-title tick state, dismissal by tapping elsewhere) are checked manually.
-
-13. **Filter control in the bottom bar beside the + button, not persisted** (over tabs under the title, cycling the badge, a persisted filter)
-    - Benefit: visible, one tap and within thumb reach; each launch starts on All, so nothing looks missing.
-    - Tradeoff: the control covers a strip of the list (bottom padding keeps the last task reachable); it hides while a form is open; toggled tasks leave filtered views right away.
-
-14. **Warm the API connection when + is tapped; still add only after the POST succeeds** (over optimistic add, warming at launch)
-    - Benefit: the POST reuses an open connection, so the wait is mostly server time (~0.3–0.8s for JSONPlaceholder's uncached `POST`), not DNS, TCP and TLS on top; the add-after-success, saving and error behaviour the brief requires is unchanged.
-    - Tradeoff: one extra cached `HEAD` per + tap; the add still waits on the server. An optimistic add would feel instant but break "add after a successful POST" and hide the saving and error states.
+7. **Warm the API connection when + is tapped; add only after the POST succeeds** (over optimistic add)
+   - Benefit: the POST waits only for the server (~0.3–0.8s), not DNS, TCP and TLS too; the brief's add-after-success, saving and error behaviour is kept.
+   - Tradeoff: one extra cached `HEAD` per + tap; adding still isn't instant.

@@ -4,9 +4,12 @@ import { Keyboard, StyleSheet, TextInput, View } from 'react-native';
 import { colors, gutter, typography } from '../theme';
 import { Checkbox } from './Checkbox';
 
-import type { TextInputInstance } from 'react-native';
+import type { Ref } from 'react';
+import type { TextInputInstance, ViewInstance } from 'react-native';
 
 type Props = {
+  /** The row's outer view, for measuring where the form sits on screen. */
+  ref?: Ref<ViewInstance>;
   title: string;
   /** The task's completion state; a new task is unchecked. */
   checked: boolean;
@@ -26,6 +29,7 @@ type Props = {
  * It's submitted through the tick button or return key.
  */
 export function DraftRow({
+  ref,
   title,
   checked,
   placeholder,
@@ -65,7 +69,7 @@ export function DraftRow({
   }
 
   return (
-    <View style={styles.row}>
+    <View ref={ref} style={styles.row}>
       <Checkbox checked={checked} />
       <TextInput
         ref={inputRef}
