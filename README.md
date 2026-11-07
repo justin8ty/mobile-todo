@@ -2,6 +2,8 @@
 
 A React Native to-do app built with Expo SDK 58 and TypeScript, using the [JSONPlaceholder](https://jsonplaceholder.typicode.com) API. Tested on Android through Expo Go. AsyncStorage is implemented.
 
+Stack: React Native, Expo SDK, TypeScript, (`fetch`, `useReducer` with custom hooks), AsyncStorage, Reanimated, Gesture Handler, Keyboard Controller.
+
 ## Install the APK
 
 The quickest way to try the app, no setup needed.
