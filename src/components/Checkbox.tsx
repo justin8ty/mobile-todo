@@ -9,7 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
-import { colors } from '../theme';
+import { colors, radius } from '../theme';
 
 const SIZE = 22;
 
@@ -75,12 +75,12 @@ const styles = StyleSheet.create({
     height: SIZE,
   },
   border: {
-    borderRadius: 6,
+    borderRadius: radius.mark,
     borderWidth: 2.2,
     borderColor: colors.line,
   },
   fill: {
-    borderRadius: 6,
+    borderRadius: radius.mark,
     backgroundColor: colors.brand,
   },
 });

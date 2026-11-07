@@ -2,7 +2,7 @@ import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
-import { colors, fade } from '../theme';
+import { colors, fade, radius, shadows } from '../theme';
 
 export const FAB_SIZE = 56;
 
@@ -72,15 +72,14 @@ const styles = StyleSheet.create({
   fab: {
     width: FAB_SIZE,
     height: FAB_SIZE,
-    borderRadius: 16,
+    borderRadius: radius.float,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.signal,
-    boxShadow: '0 6px 16px rgba(15, 23, 54, 0.16)',
+    boxShadow: shadows.float,
   },
   fabDisabled: {
     backgroundColor: colors.inactive,
-    boxShadow: '0 4px 12px rgba(15, 23, 54, 0.10)',
   },
   pressed: {
     transform: [{ scale: 0.94 }],

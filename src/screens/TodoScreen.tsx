@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
-import Animated, { FadeIn, FadeOut, LinearTransition, useAnimatedStyle } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BounceList } from '../components/BounceList';
@@ -37,6 +43,9 @@ const DISAPPEAR = FadeOut.duration(fade.out);
 
 // Gap between the bottom controls and the safe-area edge or keyboard.
 const BOTTOM_GAP = 16;
+
+// How far above the bottom controls the list starts fading into white.
+const FADE_HEIGHT = 32;
 
 function keyOf(todo: Todo): string {
   return String(todo.id);
@@ -108,6 +117,7 @@ export function TodoScreen() {
   const snackbar = useSnackbar();
   const insets = useSafeAreaInsets();
   const keyboard = useReanimatedKeyboardAnimation();
+  const listScrollY = useSharedValue(0);
   const onRetry = useCallback(() => void retry(), [retry]);
 
   const listRef = useRef<FlatList<Todo>>(null);
@@ -275,6 +285,16 @@ export function TodoScreen() {
     paddingBottom: Math.max(insets.bottom, -keyboard.height.value) + BOTTOM_GAP,
   }));
 
+  // Behind the bottom controls: white below their top edge, fading out above it, so tasks slip
+  // under the controls rather than run into them. Tall enough to reach the screen's bottom edge,
+  // and moved up with the keyboard (a transform is fine here: it takes no touches).
+  const fadeHeight = insets.bottom + BOTTOM_GAP + FAB_SIZE + FADE_HEIGHT;
+  const fadeStops = `rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.75) ${(FADE_HEIGHT / fadeHeight) * 55}%, ${colors.bg} ${(FADE_HEIGHT / fadeHeight) * 100}%`;
+
+  const fadeLiftStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: insets.bottom - Math.max(insets.bottom, -keyboard.height.value) }],
+  }));
+
   let body: ReactNode;
 
   switch (state.status) {
@@ -291,6 +311,7 @@ export function TodoScreen() {
         <Animated.View key={filter} entering={APPEAR} style={styles.page}>
           <BounceList
             ref={listRef}
+            scrollY={listScrollY}
             refreshing={refreshing}
             onRefresh={onPullToRefresh}
             itemLayoutAnimation={LAYOUT}
@@ -323,8 +344,8 @@ export function TodoScreen() {
             decelerationRate={0.99}
             contentContainerStyle={[
               styles.listContent,
-              // Room to scroll the last task above the + button.
-              { paddingBottom: insets.bottom + BOTTOM_GAP + FAB_SIZE + 16 },
+              // Room to scroll the last task clear of the + button and the fade above it.
+              { paddingBottom: fadeHeight },
             ]}
           />
         </Animated.View>
@@ -340,8 +361,17 @@ export function TodoScreen() {
       onStartShouldSetResponder={() => draft.target !== null}
       onResponderRelease={draft.dismiss}
     >
-      <Header todos={todos ?? NO_TODOS} />
+      <Header todos={todos ?? NO_TODOS} scrollY={listScrollY} />
       {body}
+      {state.status === 'ready' && (
+        <Animated.View
+          style={[
+            styles.fade,
+            { height: fadeHeight, backgroundImage: `linear-gradient(to bottom, ${fadeStops})` },
+            fadeLiftStyle,
+          ]}
+        />
+      )}
       <Animated.View style={[styles.bottom, liftStyle]}>
         {snackbar.message !== null && (
           <Snackbar
@@ -381,7 +411,14 @@ const styles = StyleSheet.create({
   listContent: {
     // Lets `EmptyState` fill the viewport and centre itself.
     flexGrow: 1,
-    paddingTop: 4,
+    paddingTop: 8,
+  },
+  fade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    pointerEvents: 'none',
   },
   bar: {
     flexDirection: 'row',

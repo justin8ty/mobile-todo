@@ -7,7 +7,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 
-import { colors, settle, typography } from '../theme';
+import { colors, radius, settle, shadows, typography } from '../theme';
 
 import type { LayoutChangeEvent } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
@@ -130,19 +130,19 @@ const styles = StyleSheet.create({
   track: {
     flexDirection: 'row',
     padding: TRACK_PADDING,
-    borderRadius: 16,
+    borderRadius: radius.float,
     backgroundColor: colors.wash,
     // Floats over the list like the + button.
-    boxShadow: '0 6px 16px rgba(15, 23, 54, 0.12)',
+    boxShadow: shadows.float,
   },
   pill: {
     position: 'absolute',
     top: TRACK_PADDING,
     bottom: TRACK_PADDING,
     left: TRACK_PADDING,
-    borderRadius: 12,
+    borderRadius: radius.control,
     backgroundColor: colors.bg,
-    boxShadow: '0 1px 3px rgba(15, 23, 54, 0.12)',
+    boxShadow: shadows.rest,
   },
   segment: {
     flex: 1,

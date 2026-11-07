@@ -20,7 +20,7 @@ import type {
   NativeSyntheticEvent,
   ScrollViewProps,
 } from 'react-native';
-import type { FlatListPropsWithLayout } from 'react-native-reanimated';
+import type { FlatListPropsWithLayout, SharedValue } from 'react-native-reanimated';
 
 // Where the list rests while refreshing, showing the spinner above it.
 const REFRESH_HOLD = 64;
@@ -52,6 +52,8 @@ type Props<T> = Omit<
   | 'onContentSizeChange'
 > & {
   ref?: Ref<FlatList>;
+  /** Written with the list's scroll offset, for views that react to it (the header's shadow). */
+  scrollY: SharedValue<number>;
   /** Shows the spinner and holds the list below it. */
   refreshing: boolean;
   /** Called when the list is pulled down past the threshold and released. */
@@ -66,8 +68,7 @@ type Props<T> = Omit<
  *
  * A vertical pan runs alongside the native scroll and only moves the list while it's at an edge.
  */
-export function BounceList<T>({ ref, refreshing, onRefresh, ...listProps }: Props<T>) {
-  const scrollY = useSharedValue(0);
+export function BounceList<T>({ ref, scrollY, refreshing, onRefresh, ...listProps }: Props<T>) {
   const maxScroll = useSharedValue(0);
   const viewportHeight = useSharedValue(0);
 
@@ -79,6 +80,11 @@ export function BounceList<T>({ ref, refreshing, onRefresh, ...listProps }: Prop
   const isRefreshing = useSharedValue(refreshing);
   // The list's vertical offset: where it rests plus the rubber-banded pull.
   const offset = useSharedValue(refreshing ? REFRESH_HOLD : 0);
+
+  // A list mounting (such as on a filter switch) starts at the top, whatever the last one reached.
+  useEffect(() => {
+    scrollY.value = 0;
+  }, [scrollY]);
 
   useEffect(() => {
     isRefreshing.value = refreshing;

@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, typography } from '../theme';
+import { colors, radius, typography } from '../theme';
 
 type Props = { message: string; onRetry: () => void };
 
@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     minWidth: 120,
     marginTop: 24,
     paddingHorizontal: 24,
-    borderRadius: 12,
+    borderRadius: radius.control,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.signal,

@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
 import Animated, { Easing, FadeIn, FadeInDown, FadeOut } from 'react-native-reanimated';
 
-import { colors, fade, typography } from '../theme';
+import { colors, fade, radius, shadows, typography } from '../theme';
 
 import type { SnackbarMessage } from '../hooks/useSnackbar';
 
@@ -45,8 +45,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
     paddingLeft: 18,
     paddingRight: 6,
-    borderRadius: 14,
+    borderRadius: radius.float,
     backgroundColor: colors.ink,
+    boxShadow: shadows.float,
   },
   text: {
     ...typography.body,
@@ -59,7 +60,7 @@ const styles = StyleSheet.create({
     minWidth: 64,
     marginLeft: 8,
     paddingHorizontal: 12,
-    borderRadius: 10,
+    borderRadius: radius.control,
     alignItems: 'center',
     justifyContent: 'center',
   },

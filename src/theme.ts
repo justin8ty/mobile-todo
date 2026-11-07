@@ -14,6 +14,30 @@ export const colors = {
   wash: '#F3F4F8',
   // Fill for a disabled button that must still read as a button on white.
   inactive: '#E3E6EE',
+  // Text on the `brand` header band.
+  onBrand: '#FFFFFF',
+} as const;
+
+/**
+ * Corner radii, by role. Nested shapes follow the outer radius minus the inset between them
+ * (the filter track's 16 less its 4px padding gives the pill's 12).
+ */
+export const radius = {
+  /** Small marks: checkboxes, the count badge. */
+  mark: 6,
+  /** Controls inside a surface: the filter pill, text buttons. */
+  control: 12,
+  /** Surfaces floating over the list: the + button, filter track, snackbar. */
+  float: 16,
+  /** The header band's lower corners. */
+  band: 24,
+} as const;
+
+export const shadows = {
+  /** Anything floating over the list, and the header band once the list scrolls beneath it. */
+  float: '0 6px 16px rgba(15, 23, 54, 0.14)',
+  /** Something resting on a surface, like the filter pill in its track. */
+  rest: '0 1px 3px rgba(15, 23, 54, 0.12)',
 } as const;
 
 // Horizontal inset shared by the header and rows, so checkboxes line up under the title.

@@ -102,7 +102,7 @@ type State =
 
 One screen. Layout from top to bottom: header, list (with the draft row above the first task), snackbar, then a floating bottom bar with the filters and the + button.
 
-**Header.** The title `JustNaik Todo` (one line, no kicker above it) with a yellow badge on the right. The badge shows `N LEFT` (incomplete count across all tasks, whatever the filter), shows `ALL DONE` when every task is complete, and is hidden when the list is empty.
+**Header.** A JustNaik-blue band, like a transit sign, running up behind the status bar with rounded lower corners. It holds the title `JustNaik Todo` (white, one line, no kicker above it) and a yellow badge on the right. The badge shows a Things-style progress pie (share of tasks done) and `N LEFT` (incomplete count across all tasks, whatever the filter), shows `ALL DONE` with a full pie when every task is complete, and is hidden when the list is empty. Once the list scrolls under the band, the band casts a soft shadow onto it.
 
 **States**
 | State | UI |
@@ -185,20 +185,23 @@ The look is Things 3's calm, expressed through JustNaik's brand and road-sign ty
 | Font | Overpass 400 / 600 / 800, loaded before the splash screen hides |
 | `bg` | `#FFFFFF` |
 | `ink` | `#0F1736` |
-| `brand` | `#234197` (JustNaik blue): checked boxes |
+| `brand` | `#234197` (JustNaik blue): header band, checked boxes |
+| `onBrand` | `#FFFFFF`: title on the header band |
 | `signal` | `#FCEC64` (JustNaik yellow): + button, count badge, snackbar action text |
 | `muted` | `#A3A9BB`: completed titles |
 | `line` | `#C3C9DA`: checkbox border |
 | `danger` | `#D93A3A`: swipe-to-delete background |
 
 - **Type sizes:** title 32/800, shrinking to fit one line on narrow phones; rows 16/400; badge 15/800 with tabular numbers; filter segments 15/600.
-- **Rows and checkboxes:** rows at least 50px tall with no dividers; spacing alone separates them. Checkboxes are 22px rounded squares (radius 6) with a 2.2px border.
-- **+ button:** 56px, radius 16, yellow, with a navy plus. As the tick it stays yellow with a navy check; while blank, it's grey (`inactive` `#E3E6EE`) with a `muted` check. Icons fade in when the button changes role.
-- **Snackbar:** ink background, white text, yellow action.
-- **Filter control:** a `wash` (`#F3F4F8`) track (radius 16, 4px padding, the + button's shadow) split into three equal 48px segments, so the control matches the + button's 56px height. A white pill with a soft shadow marks the selected segment and slides to the next one; the selected label is `ink`, the others `subtle` (`#5E6479`). Each segment has `accessibilityRole="tab"` with `accessibilityState={{ selected }}`.
+- **Corners and shadows** (`radius`, `shadows` in `theme.ts`): radius 6 for small marks (checkboxes, badge), 12 for controls inside a surface (filter pill, text buttons), 16 for surfaces floating over the list (+ button, filter track, snackbar), 24 for the header band. Nested shapes take the outer radius minus the inset. Everything floating shares one shadow (`float`); the filter pill uses a small resting one (`rest`).
+- **Bottom fade:** behind the bottom bar, the list fades into white over 32px above the controls and is solid white below their top edge, so tasks slip under the controls rather than run into them. It rises with the keyboard, and the list's bottom padding keeps the last task clear of it.
+- **Rows and checkboxes:** rows at least 50px tall with no dividers; spacing alone separates them. Checkboxes are 22px rounded squares with a 2.2px border.
+- **+ button:** 56px, yellow, with a navy plus. As the tick it stays yellow with a navy check; while blank, it's grey (`inactive` `#E3E6EE`) with a `muted` check. Icons fade in when the button changes role.
+- **Snackbar:** ink background, white text, yellow action, with the floating shadow.
+- **Filter control:** a `wash` (`#F3F4F8`) track (4px padding) split into three equal 48px segments, so the control matches the + button's 56px height. A white pill with a soft shadow marks the selected segment and slides to the next one; the selected label is `ink`, the others `subtle` (`#5E6479`). Each segment has `accessibilityRole="tab"` with `accessibilityState={{ selected }}`.
 - **Row being edited:** same layout as the draft row, so the title doesn't shift when it turns into an input.
 - **Motion:** brief and quiet, Things-style: it confirms an action without drawing the eye. Shared tokens in `theme.ts`: `settle`, a critically damped spring (no overshoot) for anything moving into place (rows, a released swipe, the list after a pull, the filter pill), and `fade` (180ms in, 140ms out) for things appearing or leaving in place. No bouncy springs and no springs on opacity. Rows fade in and out with Reanimated `entering` and `exiting`; remaining rows slide into place via `Animated.FlatList`'s `itemLayoutAnimation`. A task added from the draft row takes the draft's place without fading in again. A snackbar replacing another crossfades in place instead of rising again. Everything respects reduce-motion.
-- **Light theme only** (`userInterfaceStyle: "light"`), with a dark status bar.
+- **Light theme only** (`userInterfaceStyle: "light"`), with a light status bar over the blue header band.
 
 ## 7. Structure
 
@@ -214,7 +217,7 @@ src/
   hooks/useSwipeHint.ts
   screens/TodoScreen.tsx     picks the state view, wires list, + button, snackbar
   components/
-    Header.tsx  TodoRow.tsx  DraftRow.tsx  Checkbox.tsx
+    Header.tsx  ProgressPie.tsx  TodoRow.tsx  DraftRow.tsx  Checkbox.tsx
     Fab.tsx  Snackbar.tsx  FilterTabs.tsx  BounceList.tsx
     LoadingState.tsx  ErrorState.tsx  EmptyState.tsx
   haptics.ts  theme.ts  types.ts
