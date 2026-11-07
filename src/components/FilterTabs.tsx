@@ -1,10 +1,16 @@
-import { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useEffect, useRef } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
+import Animated, {
+  interpolateColor,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { colors, pageTiming, typography } from '../theme';
 
 import type { LayoutChangeEvent } from 'react-native';
+import type { SharedValue } from 'react-native-reanimated';
 
 export type Filter = 'all' | 'active' | 'done';
 
@@ -28,16 +34,36 @@ type Props = {
   onSelect: (filter: Filter) => void;
 };
 
-/** A segmented control beside the + button; the selected segment's pill slides with the list's pages. */
+/**
+ * A segmented control beside the + button; the selected segment's pill slides with the list's pages.
+ *
+ * The pill and label colours run on the UI thread from the moment of the tap, rather than after
+ * React renders the new page, which takes a noticeable moment.
+ */
 export function FilterTabs({ selected, onSelect }: Props) {
   const selectedIndex = FILTERS.indexOf(selected);
   const segmentWidth = useSharedValue(0);
   // Animated position of the pill, in segments.
   const position = useSharedValue(selectedIndex);
+  // The segment the pill is heading to, so a selection it already started for isn't restarted.
+  const target = useRef(selectedIndex);
 
+  function moveTo(index: number) {
+    if (index === target.current) return;
+
+    target.current = index;
+    position.value = withTiming(index, pageTiming);
+  }
+
+  // Selections made elsewhere, such as the + button switching to All.
   useEffect(() => {
-    position.value = withTiming(selectedIndex, pageTiming);
-  }, [selectedIndex, position]);
+    moveTo(selectedIndex);
+  });
+
+  function select(index: number) {
+    moveTo(index);
+    onSelect(FILTERS[index]);
+  }
 
   function onTrackLayout(event: LayoutChangeEvent) {
     segmentWidth.value = (event.nativeEvent.layout.width - TRACK_PADDING * 2) / FILTERS.length;
@@ -51,32 +77,52 @@ export function FilterTabs({ selected, onSelect }: Props) {
   return (
     <View style={styles.track} onLayout={onTrackLayout} accessibilityRole="tablist">
       <Animated.View style={[styles.pill, pillStyle]} />
-      {FILTERS.map((filter) => {
-        const isSelected = filter === selected;
-
-        return (
-          <Pressable
-            key={filter}
-            onPress={() => onSelect(filter)}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: isSelected }}
-            style={styles.segment}
-          >
-            {({ pressed }) => (
-              <Text
-                style={[
-                  styles.label,
-                  isSelected && styles.labelSelected,
-                  pressed && !isSelected && styles.labelPressed,
-                ]}
-              >
-                {LABELS[filter]}
-              </Text>
-            )}
-          </Pressable>
-        );
-      })}
+      {FILTERS.map((filter, index) => (
+        <Segment
+          key={filter}
+          label={LABELS[filter]}
+          index={index}
+          selected={index === selectedIndex}
+          position={position}
+          onPress={select}
+        />
+      ))}
     </View>
+  );
+}
+
+type SegmentProps = {
+  label: string;
+  index: number;
+  selected: boolean;
+  /** The pill's animated position, in segments. */
+  position: SharedValue<number>;
+  onPress: (index: number) => void;
+};
+
+function Segment({ label, index, selected, position, onPress }: SegmentProps) {
+  // Turns `ink` as the pill arrives and `subtle` as it leaves.
+  const labelStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(
+      Math.min(Math.abs(position.value - index), 1),
+      [0, 1],
+      [colors.ink, colors.subtle],
+    ),
+  }));
+
+  return (
+    <Pressable
+      onPress={() => onPress(index)}
+      accessibilityRole="tab"
+      accessibilityState={{ selected }}
+      style={styles.segment}
+    >
+      {({ pressed }) => (
+        <Animated.Text style={[styles.label, labelStyle, pressed && !selected && styles.labelPressed]}>
+          {label}
+        </Animated.Text>
+      )}
+    </Pressable>
   );
 }
 
@@ -106,10 +152,6 @@ const styles = StyleSheet.create({
   },
   label: {
     ...typography.segment,
-    color: colors.subtle,
-  },
-  labelSelected: {
-    color: colors.ink,
   },
   labelPressed: {
     opacity: 0.55,
