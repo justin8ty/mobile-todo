@@ -35,6 +35,9 @@ const HINT_SLIDE = { duration: 240, easing: Easing.out(Easing.cubic) };
 // How long the hint holds the sliver open, so it registers before the row settles back.
 const HINT_HOLD_MS = 180;
 
+// Pause before the hint's second nudge, for anyone who missed the first.
+const HINT_REPEAT_MS = 450;
+
 // A released swipe carries the row the rest of the way off screen.
 const SWIPE_OUT = { duration: 200, easing: Easing.out(Easing.quad) };
 
@@ -94,6 +97,8 @@ export const TodoRow = memo(function TodoRow({
     playedHintKey.current = hintKey;
     offset.value = withSequence(
       withTiming(-HINT_DISTANCE, HINT_SLIDE),
+      withDelay(HINT_HOLD_MS, withSpring(0, settle)),
+      withDelay(HINT_REPEAT_MS, withTiming(-HINT_DISTANCE, HINT_SLIDE)),
       withDelay(HINT_HOLD_MS, withSpring(0, settle)),
     );
   }, [hintKey, offset]);

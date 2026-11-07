@@ -126,7 +126,7 @@ One screen. Layout from top to bottom: header, list (with the draft row above th
 - After a delete, a snackbar shows "Task deleted · UNDO" for 4 seconds. UNDO restores the task at its original index. Only one deletion can be undone at a time, and a newer delete replaces the pending one.
 
 **Swipe hint**
-- The first row slides left 48px to show a sliver of red, holds briefly, then settles back. It plays once per trigger.
+- The first row slides left 48px to show a sliver of red, holds briefly, then settles back. After a short pause it does this once more, for anyone who missed the first.
 - On each app launch, it plays about 600ms after the list first shows tasks, and once more on the first task the user adds.
 - Once the user swipes any row, `swipeHintSeen:v1` is set and it never plays again.
 - It's skipped when the phone's reduce-motion setting is on.
@@ -245,7 +245,7 @@ One test per failure mode. Hook tests use `renderHook` with the real reducer and
 - Source code in a GitHub repo.
 - README: setup, usage, API limitations.
 
-## 10. Decisions
+## 10. ADRs
 
 1. **`useReducer` + `useTodos` hook** (over TanStack Query, Zustand)
    - Benefit: pure, testable transitions; contradictory states (loading + error) can't be represented.
@@ -288,11 +288,6 @@ One test per failure mode. Hook tests use `renderHook` with the real reducer and
 11. **Tests cover the reducer and hooks only; React Native Testing Library just for `renderHook`** (over component tests, or moving hook logic into plain functions)
     - Benefit: tests target the data-loss, ID and submission failure modes; the hooks are tested as shipped; no Reanimated or Gesture Handler mocking.
     - Tradeoff: UI rules (blank-title tick state, dismissal by tapping elsewhere) are checked manually.
-
-12. **Edit by long-press, in place, local only** (over an edit icon, an edit screen, `PATCH /todos/:id`)
-    - Benefit: rows stay clean; reuses the draft form and tick button; consistent with toggle and delete being local. A `PATCH` could target the wrong server task, because local IDs can match real server IDs (a local task 11 isn't the server's task 11).
-    - Tradeoff: long-press is hidden (the "Edit" accessibility action covers screen readers); no extra API handling to show.
-    - The form opens on release, not when the long press fires. Opening it mid-touch swaps out the view under the finger; on Fabric, the touch end for an unmounted view never reaches JS, so a stale responder swallows the next tap (the tick, which then closes the form unsaved). The haptic still marks the long press.
 
 13. **Filter control in the bottom bar beside the + button, not persisted** (over tabs under the title, cycling the badge, a persisted filter)
     - Benefit: visible, one tap and within thumb reach; each launch starts on All, so nothing looks missing.
