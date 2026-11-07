@@ -42,8 +42,7 @@ export default function App() {
       <SafeAreaProvider>
         <KeyboardProvider>
           <TodoScreen />
-          {/* Light icons on the blue header band, which runs up behind the status bar. */}
-          <StatusBar style="light" />
+          <StatusBar style="dark" />
         </KeyboardProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
   listContent: {
     // Lets `EmptyState` fill the viewport and centre itself.
     flexGrow: 1,
-    paddingTop: 8,
+    paddingTop: 4,
   },
   fade: {
     position: 'absolute',

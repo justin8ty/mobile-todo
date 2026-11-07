@@ -14,8 +14,6 @@ export const colors = {
   wash: '#F3F4F8',
   // Fill for a disabled button that must still read as a button on white.
   inactive: '#E3E6EE',
-  // Text on the `brand` header band.
-  onBrand: '#FFFFFF',
 } as const;
 
 /**
@@ -29,12 +27,10 @@ export const radius = {
   control: 12,
   /** Surfaces floating over the list: the + button, filter track, snackbar. */
   float: 16,
-  /** The header band's lower corners. */
-  band: 24,
 } as const;
 
 export const shadows = {
-  /** Anything floating over the list, and the header band once the list scrolls beneath it. */
+  /** Anything floating over the list. */
   float: '0 6px 16px rgba(15, 23, 54, 0.14)',
   /** Something resting on a surface, like the filter pill in its track. */
   rest: '0 1px 3px rgba(15, 23, 54, 0.12)',
@@ -63,14 +59,15 @@ export const fonts = {
 } as const;
 
 export const typography = {
-  title: { fontFamily: fonts.extrabold, fontSize: 32, lineHeight: 38 },
+  title: { fontFamily: fonts.extrabold, fontSize: 28, lineHeight: 34 },
   row: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 22 },
   segment: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 20 },
+  // Close to the title's size, so the count reads as part of the title line without competing
+  // with it. The tight line height keeps the badge snug.
   badge: {
     fontFamily: fonts.extrabold,
-    fontSize: 15,
-    lineHeight: 20,
-    letterSpacing: 0.4,
+    fontSize: 24,
+    lineHeight: 24,
     fontVariant: ['tabular-nums'],
   },
   // State screens (loading, error, empty) and text buttons.
