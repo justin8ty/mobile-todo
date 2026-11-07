@@ -11,6 +11,8 @@ Assume Expo Go fully supports SDK 58, no need to research.
 - Toggle a task's completion locally.
 - Add a task through `POST /todos`, then show the new task immediately.
 - Delete a task locally, with Undo.
+- Edit a task's title locally (long-press).
+- Filter the list: All / Active / Done.
 - Loading, error (with Retry) and empty states.
 - Validation: reject titles that are empty or whitespace-only. Block submission while saving. Show an error when adding fails.
 - Persistence with AsyncStorage (bonus).
@@ -44,7 +46,7 @@ type Todo = { id: number; userId: number; title: string; completed: boolean };
 **API** (`https://jsonplaceholder.typicode.com`)
 - `GET /todos?_limit=10` loads the initial tasks.
 - `POST /todos` with body `{ title, completed: false, userId: 1 }` adds a task.
-- Toggle and delete never call the API.
+- Toggle, edit and delete never call the API.
 - Requests time out after 10s (`AbortController`); a timeout counts as a failure.
 - JSONPlaceholder doesn't save writes, so `GET` always returns the original data.
 
@@ -77,16 +79,17 @@ type State =
 | `loadFailed { message }` | Becomes `error` |
 | `added { todo }` | Sets the ID to `nextId`, increments `nextId`, adds the task to the top. Sets `hasLocalChanges` |
 | `toggled { id }` | Flips `completed`. Sets `hasLocalChanges` |
+| `edited { id, title }` | Sets the trimmed title. Ignored if it's blank or unchanged; otherwise sets `hasLocalChanges` |
 | `deleted { id }` | Removes the task. Sets `hasLocalChanges` |
 | `restored { todo, index }` | Puts the task back at its original index, clamped to the list length (Undo). Sets `hasLocalChanges` |
 | `refreshed { todos }` | Replaces all tasks, resets `nextId` to `max(ids) + 1`. Clears `hasLocalChanges` |
 
-`added`, `toggled`, `deleted`, `restored` and `refreshed` are ignored unless the status is `ready`.
+`added`, `toggled`, `edited`, `deleted`, `restored` and `refreshed` are ignored unless the status is `ready`.
 
 **Responsibilities**
-- `useTodos` owns the reducer and the effects: loading at startup and saving. It exposes `state`, `addTodo(title)` (a promise that rejects on failure), `toggleTodo`, `deleteTodo` (returns the removed task and its index), `restoreTodo`, `retry` and `refresh`.
-- `useDraft` owns the new-task form: whether it's open, its text and the saving flag. The screen wires it to the draft row and the + button, which both need it.
-- Other UI-only state stays with its owner: the snackbar (`useSnackbar`), the swipe hint (`useSwipeHint`) and whether a refresh is in progress (the screen).
+- `useTodos` owns the reducer and the effects: loading at startup and saving. It exposes `state`, `addTodo(title)` (a promise that rejects on failure), `toggleTodo`, `editTodo(id, title)`, `deleteTodo` (returns the removed task and its index), `restoreTodo`, `retry` and `refresh`.
+- `useDraft` owns the one open form: its target (a new task, or the ID of the task being edited), its text and the saving flag. The screen wires it to the draft row, the row being edited and the + button. Only one form is open at a time; opening one closes the other.
+- Other UI-only state stays with its owner: the snackbar (`useSnackbar`), the swipe hint (`useSwipeHint`), and the filter and whether a refresh is in progress (the screen).
 
 **Startup**
 1. Set `loading`.
@@ -98,7 +101,7 @@ type State =
 
 One screen. Layout from top to bottom: header, list (with the draft row above the first task), floating + button, snackbar.
 
-**Header.** A `JUSTNAIK` kicker line, the title `Todo`, and a yellow badge. The badge shows `N LEFT` (incomplete count), shows `ALL DONE` when every task is complete, and is hidden when the list is empty.
+**Header.** A `JUSTNAIK` kicker line, the title `Todo`, and a yellow badge. The badge shows `N LEFT` (incomplete count across all tasks, whatever the filter), shows `ALL DONE` when every task is complete, and is hidden when the list is empty. Below the title sit the filter tabs.
 
 **States**
 | State | UI |
@@ -106,6 +109,7 @@ One screen. Layout from top to bottom: header, list (with the draft row above th
 | `loading` | Spinner + "Loading tasks…". + button hidden |
 | `error` | "Couldn't load tasks" + error detail + **Retry**. + button hidden |
 | `ready`, empty | Empty state ("No tasks" / "Tap + to add one"), rendered through `ListEmptyComponent` so it can be pulled to refresh |
+| `ready`, filter matches nothing | "Nothing left to do" (Active) or "Nothing done yet" (Done), same placement |
 | `ready`, tasks | Reanimated `Animated.FlatList` of rows |
 
 **Toggle**
@@ -135,6 +139,18 @@ One screen. Layout from top to bottom: header, list (with the draft row above th
 - Tapping or scrolling anywhere else closes the draft and discards its text: a tap in the list (a row tap only closes it, without toggling), on the header, a drag of the list, or Android's back button. Taps on the button and snackbar don't count.
 - Dismissing while saving closes the draft, but the request still finishes and the button keeps its spinner until then.
 - How dismissal is detected: the input's `onBlur` closes the draft. The list uses `keyboardShouldPersistTaps="never"`, so list taps blur it. The screen's root view claims taps nothing else handles (`onStartShouldSetResponder`). The draft row blurs its input on `keyboardDidHide`, because Android's back button hides the keyboard without blurring. The inert tick still takes its touch rather than being `disabled`, because a disabled `Pressable` lets the tap fall through to the root and close the draft.
+
+**Edit (long-press)**
+- Long-pressing a row (Pressable `onLongPress`) plays a light haptic and turns that row into an input holding its title. The input gets focus, with the cursor at the end. Rows also get an accessibility action named "Edit".
+- It's the same form as Add: the + button becomes the tick, which is grey while the title is blank; the return key also saves; tapping elsewhere, dragging the list or pressing back cancels and keeps the original title.
+- Saving dispatches `edited` and closes the form immediately (no request, no spinner). An unchanged title just closes it.
+- While a row is being edited, its swipe and toggle are off.
+
+**Filter**
+- Three tabs under the title: `ALL`, `ACTIVE`, `DONE`. The filter is screen state, not persisted; each launch starts on All. The tabs are hidden while there are no tasks.
+- The list shows only matching tasks. A task toggled out of the current filter leaves with its exit animation.
+- Tapping + switches to All first, so the new task is visible.
+- The swipe hint plays on the first visible row. Undo restores by the task's index in the full list.
 
 **Pull-to-refresh** (list and empty state)
 - If `hasLocalChanges` is true, an Alert asks first: "Reload tasks?" / "This replaces your changes with the original tasks from the server." with Cancel and Reload. Cancel stops the spinner and changes nothing.
@@ -172,6 +188,8 @@ The look is Things 3's calm, expressed through JustNaik's brand and road-sign ty
 - **Rows and checkboxes:** rows at least 50px tall with no dividers; spacing alone separates them. Checkboxes are 22px rounded squares (radius 6) with a 2.2px border.
 - **+ button:** 56px, radius 16, yellow, with a navy plus. As the tick it stays yellow with a navy check; while blank, it's grey (`inactive` `#E3E6EE`) with a `muted` check. Icons fade in when the button changes role.
 - **Snackbar:** ink background, white text, yellow action.
+- **Filter tabs:** kicker type (12/800, 0.14em); the selected tab is `ink` with a 2px `signal` underline, the others `muted`. Each tab has a 48dp touch target; `accessibilityRole="tab"` with `accessibilityState={{ selected }}`.
+- **Row being edited:** same layout as the draft row, so the title doesn't shift when it turns into an input.
 - **Motion:** spring-based. Rows animate in and out with Reanimated `entering` and `exiting`; remaining rows slide into place via `Animated.FlatList`'s `itemLayoutAnimation`. Everything respects reduce-motion.
 - **Light theme only** (`userInterfaceStyle: "light"`), with a dark status bar.
 
@@ -184,13 +202,14 @@ src/
   storage/todos.ts           load, save (+ swipe-hint flag)
   state/todosReducer.ts      State, Action, reducer (pure)
   hooks/useTodos.ts          reducer + load/save effects + async actions
-  hooks/useDraft.ts          new-task form: open, text, saving, submit, dismiss
+  hooks/useDraft.ts          the one open form (new task or edit): target, text, saving
   hooks/useSnackbar.ts
   hooks/useSwipeHint.ts
   screens/TodoScreen.tsx     picks the state view, wires list, + button, snackbar
   components/
     Header.tsx  TodoRow.tsx  DraftRow.tsx  Checkbox.tsx
-    Fab.tsx  Snackbar.tsx  LoadingState.tsx  ErrorState.tsx  EmptyState.tsx
+    Fab.tsx  Snackbar.tsx  FilterTabs.tsx
+    LoadingState.tsx  ErrorState.tsx  EmptyState.tsx
   haptics.ts  theme.ts  types.ts
 ```
 
@@ -212,6 +231,7 @@ One test per failure mode. Hook tests use `renderHook` with the real reducer and
 | 10 | Save during loading overwrites storage with an empty list | Hook |
 | 11 | Submitting twice while saving adds the task twice, or the draft stays open after success | Hook (`useDraft` + `useTodos`) |
 | 12 | A failed add loses the draft's text, or RETRY doesn't add the failed title | Hook (`useDraft` + `useTodos`) |
+| 13 | `edited` changes the wrong task, saves a blank or untrimmed title, or flags an unchanged title as a local change | Reducer |
 
 ## 9. Deliverables
 
@@ -261,3 +281,11 @@ One test per failure mode. Hook tests use `renderHook` with the real reducer and
 11. **Tests cover the reducer and hooks only; React Native Testing Library just for `renderHook`** (over component tests, or moving hook logic into plain functions)
     - Benefit: tests target the data-loss, ID and submission failure modes; the hooks are tested as shipped; no Reanimated or Gesture Handler mocking.
     - Tradeoff: UI rules (blank-title tick state, dismissal by tapping elsewhere) are checked manually.
+
+12. **Edit by long-press, in place, local only** (over an edit icon, an edit screen, `PATCH /todos/:id`)
+    - Benefit: rows stay clean; reuses the draft form and tick button; consistent with toggle and delete being local. A `PATCH` could target the wrong server task, because local IDs can match real server IDs (a local task 11 isn't the server's task 11).
+    - Tradeoff: long-press is hidden (the "Edit" accessibility action covers screen readers); no extra API handling to show.
+
+13. **Filter tabs under the title, not persisted** (over cycling the badge, a persisted filter)
+    - Benefit: visible and one tap; each launch starts on All, so nothing looks missing.
+    - Tradeoff: one more row of header chrome; toggled tasks leave filtered views right away.
