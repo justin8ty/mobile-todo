@@ -2,12 +2,17 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, typography } from '../theme';
 
+type Props = {
+  heading: string;
+  hint?: string;
+};
+
 /** Rendered as the list's `ListEmptyComponent`, so pull-to-refresh still works when empty. */
-export function EmptyState() {
+export function EmptyState({ heading, hint }: Props) {
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>No tasks</Text>
-      <Text style={styles.hint}>Tap + to add one</Text>
+      <Text style={styles.heading}>{heading}</Text>
+      {hint !== undefined && <Text style={styles.hint}>{hint}</Text>}
     </View>
   );
 }

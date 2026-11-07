@@ -19,9 +19,10 @@ import { useSwipeHint } from '../hooks/useSwipeHint';
 import { useTodos } from '../hooks/useTodos';
 import { colors, gutter } from '../theme';
 
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import type { FlatList, ListRenderItem } from 'react-native';
 import type { FabMode } from '../components/Fab';
+import type { Filter } from '../components/FilterTabs';
 import type { Todo } from '../types';
 
 const NO_TODOS: Todo[] = [];
@@ -38,6 +39,24 @@ const BOTTOM_GAP = 16;
 
 function keyOf(todo: Todo): string {
   return String(todo.id);
+}
+
+function matchesFilter(todo: Todo, filter: Filter): boolean {
+  switch (filter) {
+    case 'all':
+      return true;
+    case 'active':
+      return !todo.completed;
+    case 'done':
+      return todo.completed;
+  }
+}
+
+function emptyState(todos: Todo[], filter: Filter): ReactElement {
+  if (todos.length === 0) return <EmptyState heading="No tasks" hint="Tap + to add one" />;
+
+  // Only a filter can hide every task, and All hides none.
+  return <EmptyState heading={filter === 'done' ? 'Nothing done yet' : 'Nothing left to do'} />;
 }
 
 /**
@@ -80,12 +99,20 @@ export function TodoScreen() {
   const addFailedMessageId = useRef<number | null>(null);
   const undoMessageId = useRef<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState<Filter>('all');
 
   const { show, dismiss } = snackbar;
 
-  const firstId = state.status === 'ready' ? (state.todos[0]?.id ?? null) : null;
-  const { hint, onTaskAdded, onSwiped } = useSwipeHint(firstId);
-  const insertedIds = useInsertedIds(state.status === 'ready' ? state.todos : null);
+  const todos = state.status === 'ready' ? state.todos : null;
+
+  const visibleTodos = useMemo(
+    () => todos?.filter((todo) => matchesFilter(todo, filter)) ?? NO_TODOS,
+    [todos, filter],
+  );
+
+  const { hint, onTaskAdded, onSwiped } = useSwipeHint(visibleTodos[0]?.id ?? null);
+  // From the full list, so rows shown by switching filters appear without animating in.
+  const insertedIds = useInsertedIds(todos);
 
   async function reload() {
     setRefreshing(true);
@@ -159,8 +186,15 @@ export function TodoScreen() {
       return;
     }
 
+    // The new task goes to the top of the full list, so show all of it.
+    setFilter('all');
     listRef.current?.scrollToOffset({ offset: 0, animated: true });
     draft.startNew();
+  }
+
+  function onFilterChange(next: Filter) {
+    draft.dismiss();
+    setFilter(next);
   }
 
   const onEdit = useCallback(
@@ -248,7 +282,7 @@ export function TodoScreen() {
         <Animated.FlatList
           ref={listRef}
           itemLayoutAnimation={LAYOUT}
-          data={state.todos}
+          data={visibleTodos}
           keyExtractor={keyOf}
           renderItem={renderTodo}
           ListHeaderComponent={
@@ -266,7 +300,7 @@ export function TodoScreen() {
               </Animated.View>
             ) : undefined
           }
-          ListEmptyComponent={EmptyState}
+          ListEmptyComponent={emptyState(state.todos, filter)}
           // While the form is open, a tap anywhere in the list (rows included) only dismisses it.
           keyboardShouldPersistTaps="never"
           keyboardDismissMode="on-drag"
@@ -296,7 +330,7 @@ export function TodoScreen() {
       onStartShouldSetResponder={() => draft.target !== null}
       onResponderRelease={draft.dismiss}
     >
-      <Header todos={state.status === 'ready' ? state.todos : NO_TODOS} />
+      <Header todos={todos ?? NO_TODOS} filter={filter} onFilterChange={onFilterChange} />
       {body}
       <Animated.View
         style={[styles.bottom, liftStyle]}
