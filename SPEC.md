@@ -160,6 +160,7 @@ One screen. Layout from top to bottom: header, list (with the draft row above th
 
 **Pull-to-refresh** (list and empty state)
 - Built on the bounce: pulling down past 80px (after resistance) plays a haptic, and releasing there refreshes. While refreshing, the list rests 64px down with a spinner above it.
+- The spinner sits on a 40px white disc with the floating shadow, drawn above the list so it reads as solid rather than part of the background. It emerges with the pull: centred in the gap above the list, growing from 60% and fading in until the list reaches its 64px rest.
 - If `hasLocalChanges` is true, an Alert asks first: "Reload tasks?" / "This replaces your changes with the original tasks from the server." with Cancel and Reload. Cancel stops the spinner and changes nothing.
 - Reload calls `GET`. On success, dispatch `refreshed` and cancel any pending Undo (its task could duplicate one from the server). On failure, keep the current list and show the snackbar "Couldn't refresh · RETRY". RETRY reloads immediately, without asking again.
 

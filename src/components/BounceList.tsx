@@ -10,7 +10,7 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { thresholdHaptic } from '../haptics';
-import { colors, settle } from '../theme';
+import { colors, settle, shadows } from '../theme';
 
 import type { Ref } from 'react';
 import type {
@@ -27,6 +27,8 @@ const REFRESH_HOLD = 64;
 
 // How far the list must be pulled down (after resistance) for releasing to refresh.
 const REFRESH_THRESHOLD = 80;
+
+const SPINNER_DISC = 40;
 
 /**
  * iOS's rubber band: the further past the edge, the less the list follows the finger.
@@ -161,16 +163,18 @@ export function BounceList<T>({ ref, scrollY, refreshing, onRefresh, ...listProp
 
   const listStyle = useAnimatedStyle(() => ({ transform: [{ translateY: offset.value }] }));
 
+  // The disc emerges with the pull: it stays centred in the gap opened above the list, growing
+  // and fading in until the list reaches its refreshing rest.
   const spinnerStyle = useAnimatedStyle(() => ({
     opacity: interpolate(offset.value, [0, REFRESH_HOLD], [0, 1], 'clamp'),
+    transform: [
+      { translateY: (offset.value - REFRESH_HOLD) / 2 },
+      { scale: interpolate(offset.value, [0, REFRESH_HOLD], [0.6, 1], 'clamp') },
+    ],
   }));
 
   return (
     <View style={styles.container}>
-      <Animated.View style={[styles.spinner, spinnerStyle]}>
-        {/* Always spinning; its opacity follows the pull, so it fades in as the list moves down. */}
-        <ActivityIndicator color={colors.brand} />
-      </Animated.View>
       <GestureDetector gesture={pan}>
         <Animated.View style={[styles.list, listStyle]} onLayout={onLayout}>
           <Animated.FlatList
@@ -185,6 +189,13 @@ export function BounceList<T>({ ref, scrollY, refreshing, onRefresh, ...listProp
           />
         </Animated.View>
       </GestureDetector>
+      {/* After the list, so the disc floats above it and its shadow falls on the tasks. */}
+      <Animated.View style={[styles.spinner, spinnerStyle]}>
+        <View style={styles.disc}>
+          {/* Always spinning; the disc's opacity follows the pull. */}
+          <ActivityIndicator color={colors.brand} />
+        </View>
+      </Animated.View>
     </View>
   );
 }
@@ -203,6 +214,17 @@ const styles = StyleSheet.create({
     height: REFRESH_HOLD,
     alignItems: 'center',
     justifyContent: 'center',
+    // Pulls and taps pass through to the list.
+    pointerEvents: 'none',
+  },
+  disc: {
+    width: SPINNER_DISC,
+    height: SPINNER_DISC,
+    borderRadius: SPINNER_DISC / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.bg,
+    boxShadow: shadows.float,
   },
   list: {
     flex: 1,
