@@ -297,3 +297,7 @@ One test per failure mode. Hook tests use `renderHook` with the real reducer and
 13. **Filter control in the bottom bar beside the + button, not persisted** (over tabs under the title, cycling the badge, a persisted filter)
     - Benefit: visible, one tap and within thumb reach; each launch starts on All, so nothing looks missing.
     - Tradeoff: the control covers a strip of the list (bottom padding keeps the last task reachable); it hides while a form is open; toggled tasks leave filtered views right away.
+
+14. **Warm the API connection when + is tapped; still add only after the POST succeeds** (over optimistic add, warming at launch)
+    - Benefit: the POST reuses an open connection, so the wait is mostly server time (~0.3–0.8s for JSONPlaceholder's uncached `POST`), not DNS, TCP and TLS on top; the add-after-success, saving and error behaviour the brief requires is unchanged.
+    - Tradeoff: one extra cached `HEAD` per + tap; the add still waits on the server. An optimistic add would feel instant but break "add after a successful POST" and hide the saving and error states.
