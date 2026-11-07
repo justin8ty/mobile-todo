@@ -243,4 +243,15 @@ One test per failure mode. Hook tests use `renderHook` with the real reducer and
 
 8. **One snackbar for Undo, add failure and refresh failure** (over Alert, inline errors)
    - Benefit: non-blocking; Android-native; one component for three cases.
-   - Tradeoff: custom component that must track the keyboard (`react-native-keyboard-controller`); messages expire after 4s.
+   - Tradeoff: custom component that must track the keyboard (`react-native-keyboard-controller`, since Reanimated's `useAnimatedKeyboard` is deprecated); messages expire after 4s.
+
+9. **Unreadable or corrupt storage falls back to the API** (over an error screen)
+   - Benefit: launch never crashes or dead-ends.
+   - Tradeoff: local changes in bad data are silently discarded (console warning only).
+
+10. **Swipe hint repeats each launch until the first swipe** (over once ever)
+    - Benefit: users who missed it get another chance to learn swipe-to-delete.
+
+11. **Tests cover the reducer and hook only; React Native Testing Library just for `renderHook`** (over component tests, or moving hook logic into plain functions)
+    - Benefit: tests target the data-loss and ID failure modes; the hook is tested as shipped; no Reanimated or Gesture Handler mocking.
+    - Tradeoff: UI rules (blank-title rejection, disabled while saving) are checked manually.
