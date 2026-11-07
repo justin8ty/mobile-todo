@@ -20,6 +20,8 @@ pnpm start
 - **View:** the first 10 tasks load from the API. The badge shows how many are left.
 - **Complete:** tap a task to toggle it.
 - **Add:** tap **+**, type a title, then tap the **✓** button (where **+** was) or press return. The ✓ stays grey until you type a title. Tap anywhere else to cancel. If adding fails, your text stays; tap **✓** again or **Retry** in the message.
+- **Edit:** long-press a task to edit its title in place, then tap **✓** or press return. Tap anywhere else to cancel and keep the original title.
+- **Filter:** tap **All**, **Active** or **Done** under the title. The badge always counts every task left, whatever the filter.
 - **Delete:** swipe a task left. Tap **Undo** within 4 seconds to restore it.
 - **Reload:** pull down on the list to fetch the original tasks again. If you've made changes, you'll be asked to confirm first, since reloading replaces them.
 
@@ -30,5 +32,5 @@ Tasks are saved on the device, so they remain after restarting the app.
 JSONPlaceholder is a fake API that doesn't save writes:
 
 - Added tasks are sent with `POST /todos`, but the server doesn't store them, and it returns `id: 201` for every new task. The app assigns its own IDs instead.
-- Completing and deleting tasks only change the list on the device; they aren't sent to the API.
+- Completing, editing and deleting tasks only change the list on the device; they aren't sent to the API. (Edits aren't sent with `PATCH`, since the app's own IDs can match a different task on the server.)
 - Reloading always returns the original 10 tasks, so it replaces any local changes.
