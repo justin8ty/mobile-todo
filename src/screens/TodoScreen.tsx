@@ -316,6 +316,9 @@ export function TodoScreen() {
             // While the form is open, a tap anywhere in the list (rows included) only dismisses it.
             keyboardShouldPersistTaps="never"
             keyboardDismissMode="on-drag"
+            // Each filter switch remounts the list; render a full screen at once rather than the
+            // default 10, so the rest don't pop in a moment later.
+            initialNumToRender={20}
             // iOS-like flings that glide further (Android's default, 0.985, stops short).
             decelerationRate={0.99}
             contentContainerStyle={[
