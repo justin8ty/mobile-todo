@@ -313,6 +313,10 @@ export function TodoScreen() {
             // While the form is open, a tap anywhere in the list (rows included) only dismisses it.
             keyboardShouldPersistTaps="never"
             keyboardDismissMode="on-drag"
+            // iOS-like feel on Android: flings glide further (Android's default is 0.985, which
+            // stops short), and the native overscroll stretch shows even when the list fits.
+            decelerationRate={0.99}
+            overScrollMode="always"
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
