@@ -433,11 +433,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   bottom: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    // Taps between the controls reach the list underneath.
+    // Fills the screen and stacks the controls from its bottom edge, so its frame never changes
+    // with its content. A leaving snackbar fades where it was, rather than dropping with the top
+    // edge of a container that shrinks once the snackbar is gone.
+    ...StyleSheet.absoluteFill,
+    justifyContent: 'flex-end',
+    // Taps outside the controls reach the list underneath.
     pointerEvents: 'box-none',
   },
 });
