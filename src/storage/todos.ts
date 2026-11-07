@@ -6,6 +6,7 @@ import type { Todo } from '../types';
 
 const TODOS_KEY = 'todos:v1';
 const SWIPE_HINT_SEEN_KEY = 'swipeHintSeen:v1';
+const GESTURE_TIP_SEEN_KEY = 'gestureTipSeen:v1';
 
 export type StoredTodos = { todos: Todo[]; hasLocalChanges: boolean; nextId: number };
 
@@ -67,21 +68,37 @@ export async function save(data: StoredTodos): Promise<void> {
   }
 }
 
-/** Defaults to `false` on read failure: replaying the hint is harmless. */
-export async function loadSwipeHintSeen(): Promise<boolean> {
+/** Defaults to `false` on read failure: showing a hint again is harmless. */
+async function loadFlag(key: string): Promise<boolean> {
   try {
-    return (await AsyncStorage.getItem(SWIPE_HINT_SEEN_KEY)) === 'true';
+    return (await AsyncStorage.getItem(key)) === 'true';
   } catch (error) {
-    console.warn('Failed to read swipe hint flag', error);
+    console.warn(`Failed to read ${key}`, error);
 
     return false;
   }
 }
 
-export async function saveSwipeHintSeen(): Promise<void> {
+async function saveFlag(key: string): Promise<void> {
   try {
-    await AsyncStorage.setItem(SWIPE_HINT_SEEN_KEY, 'true');
+    await AsyncStorage.setItem(key, 'true');
   } catch (error) {
-    console.warn('Failed to save swipe hint flag', error);
+    console.warn(`Failed to save ${key}`, error);
   }
+}
+
+export function loadSwipeHintSeen(): Promise<boolean> {
+  return loadFlag(SWIPE_HINT_SEEN_KEY);
+}
+
+export function saveSwipeHintSeen(): Promise<void> {
+  return saveFlag(SWIPE_HINT_SEEN_KEY);
+}
+
+export function loadGestureTipSeen(): Promise<boolean> {
+  return loadFlag(GESTURE_TIP_SEEN_KEY);
+}
+
+export function saveGestureTipSeen(): Promise<void> {
+  return saveFlag(GESTURE_TIP_SEEN_KEY);
 }

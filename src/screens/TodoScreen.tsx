@@ -22,6 +22,7 @@ import { Snackbar } from '../components/Snackbar';
 import { TodoRow } from '../components/TodoRow';
 import { useDraft } from '../hooks/useDraft';
 import { useSnackbar } from '../hooks/useSnackbar';
+import { useGestureTip } from '../hooks/useGestureTip';
 import { useKeyboardReveal } from '../hooks/useKeyboardReveal';
 import { useSwipeHint } from '../hooks/useSwipeHint';
 import { useTodos } from '../hooks/useTodos';
@@ -47,6 +48,9 @@ const BOTTOM_GAP = 16;
 
 // How far above the bottom controls the list starts fading into white.
 const FADE_HEIGHT = 32;
+
+// Long enough to read and try both gestures; OK dismisses it sooner.
+const GESTURE_TIP_MS = 15_000;
 
 function keyOf(todo: Todo): string {
   return String(todo.id);
@@ -141,6 +145,13 @@ export function TodoScreen() {
   );
 
   const { hint, onTaskAdded, onSwiped } = useSwipeHint(visibleTodos[0]?.id ?? null);
+
+  // Names the row gestures once, alongside the first swipe hint. OK just dismisses it.
+  const showGestureTip = useCallback(() => {
+    show('Swipe left to delete. Hold to edit.', { label: 'OK', onPress: () => {} }, GESTURE_TIP_MS);
+  }, [show]);
+
+  useGestureTip((todos?.length ?? 0) > 0, showGestureTip);
 
   async function reload() {
     setRefreshing(true);

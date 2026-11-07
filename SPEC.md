@@ -14,7 +14,7 @@ Assume Expo Go fully supports SDK 58, no need to research.
 - Edit a task's title locally (long-press).
 - Filter the list: All / Active / Done.
 - Loading, error (with Retry) and empty states.
-- Validation: reject titles that are empty or whitespace-only. Block submission while saving. Show an error when adding fails.
+- Validation: reject titles that are empty or whitespace-only. Titles are capped at 200 characters (the input's `maxLength`, for adding and editing). Block submission while saving. Show an error when adding fails.
 - Persistence with AsyncStorage (bonus).
 - Pull-to-refresh with a confirmation step, swipe-to-delete with a first-run hint, and haptics.
 
@@ -56,6 +56,7 @@ type Todo = { id: number; userId: number; title: string; completed: boolean };
 **Storage**
 - Key `todos:v1` holds `{ todos: Todo[], hasLocalChanges: boolean, nextId: number }`.
 - Key `swipeHintSeen:v1` holds a boolean.
+- Key `gestureTipSeen:v1` holds a boolean.
 - Reads and writes go through `storage/todos.ts` (`load`, `save`) and never directly from components.
 - `load` returns:
   - `null` when nothing is stored
@@ -126,10 +127,14 @@ One screen. Layout from top to bottom: header, list (with the draft row above th
 - After a delete, a snackbar shows "Task deleted · UNDO" for 4 seconds. UNDO restores the task at its original index. Only one deletion can be undone at a time, and a newer delete replaces the pending one.
 
 **Swipe hint**
-- The first row slides left 48px to show a sliver of red, holds briefly, then settles back. After a short pause it does this once more, for anyone who missed the first.
+- The first row slides left 72px to show the red delete area with its trash icon, holds for half a second, then settles back. It does this three times, with a short pause between, for anyone who missed the first.
 - On each app launch, it plays about 600ms after the list first shows tasks, and once more on the first task the user adds.
 - Once the user swipes any row, `swipeHintSeen:v1` is set and it never plays again.
 - It's skipped when the phone's reduce-motion setting is on.
+
+**Gesture tip** (`useGestureTip`)
+- The first time the list shows tasks, a snackbar reads "Swipe left to delete. Hold to edit." with an OK button, timed with the launch swipe hint. It stays up 15 seconds, or until OK is tapped.
+- It shows once ever: `gestureTipSeen:v1` is set when it appears. Reduce motion doesn't skip it, since it's those users' only cue.
 
 **Add (draft row + tick button)**
 - Tapping the + button scrolls the list to the top and opens a draft row there (`ListHeaderComponent`): a hollow checkbox and a `TextInput`. The input gets focus and the keyboard opens.
@@ -167,7 +172,7 @@ One screen. Layout from top to bottom: header, list (with the draft row above th
 **Snackbar**
 - One shared component, showing one message at a time; a new message replaces the current one.
 - It appears just above the bottom bar (the filters and + button), which sits above the safe-area inset or the keyboard when open (keyboard height from `react-native-keyboard-controller`).
-- It hides automatically after 4 seconds and has an optional action button.
+- It hides automatically after 4 seconds (longer if the caller asks, as for the gesture tip) and has an optional action button.
 - It's announced to screen readers (`accessibilityLiveRegion="polite"`).
 
 **Mobile details**
@@ -216,6 +221,7 @@ src/
   hooks/useDraft.ts          the one open form (new task or edit): target, text, saving
   hooks/useSnackbar.ts
   hooks/useSwipeHint.ts
+  hooks/useGestureTip.ts     one-time snackbar naming the row gestures
   hooks/useKeyboardReveal.ts keeps the open form above the keyboard
   screens/TodoScreen.tsx     picks the state view, wires list, + button, snackbar
   components/

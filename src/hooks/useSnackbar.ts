@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+// How long a message stays up unless the caller asks for longer.
 const VISIBLE_MS = 4000;
 
 export type SnackbarAction = { label: string; onPress: () => void };
@@ -10,6 +11,8 @@ export type SnackbarMessage = {
   action: SnackbarAction | null;
   /** Shown while another message was still up, so it takes that one's place rather than arriving. */
   replacing: boolean;
+  /** How long it stays up before hiding itself. */
+  durationMs: number;
 };
 
 /** One message at a time: showing a new one replaces the current one and restarts the timer. */
@@ -20,21 +23,24 @@ export function useSnackbar() {
   useEffect(() => {
     if (message === null) return;
 
-    const timer = setTimeout(() => setMessage(null), VISIBLE_MS);
+    const timer = setTimeout(() => setMessage(null), message.durationMs);
 
     return () => clearTimeout(timer);
   }, [message]);
 
   /** Returns the message's ID, for dismissing exactly this message later. */
-  const show = useCallback((text: string, action: SnackbarAction | null = null): number => {
-    lastId.current += 1;
+  const show = useCallback(
+    (text: string, action: SnackbarAction | null = null, durationMs = VISIBLE_MS): number => {
+      lastId.current += 1;
 
-    const id = lastId.current;
+      const id = lastId.current;
 
-    setMessage((current) => ({ id, text, action, replacing: current !== null }));
+      setMessage((current) => ({ id, text, action, replacing: current !== null, durationMs }));
 
-    return id;
-  }, []);
+      return id;
+    },
+    [],
+  );
 
   /** Hides message `id` if it is still showing; a newer message is left alone. */
   const dismiss = useCallback((id: number) => {

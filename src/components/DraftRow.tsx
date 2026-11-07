@@ -7,6 +7,9 @@ import { Checkbox } from './Checkbox';
 import type { Ref } from 'react';
 import type { TextInputInstance, ViewInstance } from 'react-native';
 
+// Generous for any real task; stops a pasted wall of text becoming one giant row.
+const MAX_TITLE_LENGTH = 200;
+
 type Props = {
   /** The row's outer view, for measuring where the form sits on screen. */
   ref?: Ref<ViewInstance>;
@@ -75,6 +78,7 @@ export function DraftRow({
         ref={inputRef}
         value={title}
         onChangeText={onChangeTitle}
+        maxLength={MAX_TITLE_LENGTH}
         onSubmitEditing={onSubmit}
         onFocus={onFocus}
         onBlur={onDismiss}

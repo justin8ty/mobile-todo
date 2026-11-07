@@ -27,16 +27,16 @@ import type { Todo } from '../types';
 // Fraction of the row width a swipe must pass for releasing to delete.
 const DELETE_THRESHOLD = 0.35;
 
-// How far the swipe hint slides the row to show a sliver of the delete area.
-const HINT_DISTANCE = 48;
+// How far the swipe hint slides the row: wide enough to show the red and its trash icon clearly.
+const HINT_DISTANCE = 72;
 
-const HINT_SLIDE = { duration: 240, easing: Easing.out(Easing.cubic) };
+const HINT_SLIDE = { duration: 300, easing: Easing.out(Easing.cubic) };
 
-// How long the hint holds the sliver open, so it registers before the row settles back.
-const HINT_HOLD_MS = 180;
+// How long the hint holds the delete area open, long enough to read the trash icon.
+const HINT_HOLD_MS = 500;
 
-// Pause before the hint's second nudge, for anyone who missed the first.
-const HINT_REPEAT_MS = 450;
+// Pause before each repeat of the hint's nudge, for anyone who missed the first.
+const HINT_REPEAT_MS = 400;
 
 // A released swipe carries the row the rest of the way off screen.
 const SWIPE_OUT = { duration: 200, easing: Easing.out(Easing.quad) };
@@ -97,6 +97,8 @@ export const TodoRow = memo(function TodoRow({
     playedHintKey.current = hintKey;
     offset.value = withSequence(
       withTiming(-HINT_DISTANCE, HINT_SLIDE),
+      withDelay(HINT_HOLD_MS, withSpring(0, settle)),
+      withDelay(HINT_REPEAT_MS, withTiming(-HINT_DISTANCE, HINT_SLIDE)),
       withDelay(HINT_HOLD_MS, withSpring(0, settle)),
       withDelay(HINT_REPEAT_MS, withTiming(-HINT_DISTANCE, HINT_SLIDE)),
       withDelay(HINT_HOLD_MS, withSpring(0, settle)),

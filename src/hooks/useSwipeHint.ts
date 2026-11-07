@@ -4,7 +4,7 @@ import { useReducedMotion } from 'react-native-reanimated';
 import * as storage from '../storage/todos';
 
 // Lets the list (or a newly added row) settle before the hint moves it.
-const HINT_DELAY_MS = 600;
+export const HINT_DELAY_MS = 600;
 
 /** Ask the row with `id` to play the hint; a new `key` means play again. */
 export type SwipeHint = { id: number; key: number };
