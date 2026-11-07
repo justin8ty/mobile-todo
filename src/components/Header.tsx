@@ -29,10 +29,15 @@ export function Header({ todos, filter, onFilterChange }: Props) {
 
   return (
     <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
-      <Text style={styles.kicker}>JUSTNAIK</Text>
       <View style={styles.titleLine}>
-        <Text style={styles.title} accessibilityRole="header">
-          Todo
+        <Text
+          style={styles.title}
+          accessibilityRole="header"
+          // Narrow phones shrink the title rather than wrapping it under the badge.
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        >
+          JustNaik Todo
         </Text>
         {badge !== null && (
           <View style={styles.badge}>
@@ -52,10 +57,6 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
     backgroundColor: colors.bg,
   },
-  kicker: {
-    ...typography.kicker,
-    color: colors.brand,
-  },
   titleLine: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -64,12 +65,13 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.title,
+    flexShrink: 1,
     color: colors.ink,
   },
   badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 8,
     backgroundColor: colors.signal,
   },
   badgeText: {

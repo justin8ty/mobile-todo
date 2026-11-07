@@ -101,7 +101,7 @@ type State =
 
 One screen. Layout from top to bottom: header, list (with the draft row above the first task), floating + button, snackbar.
 
-**Header.** A `JUSTNAIK` kicker line, the title `Todo`, and a yellow badge. The badge shows `N LEFT` (incomplete count across all tasks, whatever the filter), shows `ALL DONE` when every task is complete, and is hidden when the list is empty. Below the title sit the filter tabs.
+**Header.** The title `JustNaik Todo` (one line, no kicker above it) with a yellow badge on the right. The badge shows `N LEFT` (incomplete count across all tasks, whatever the filter), shows `ALL DONE` when every task is complete, and is hidden when the list is empty. Below the title sit the filter tabs.
 
 **States**
 | State | UI |
@@ -178,17 +178,17 @@ The look is Things 3's calm, expressed through JustNaik's brand and road-sign ty
 | Font | Overpass 400 / 600 / 800, loaded before the splash screen hides |
 | `bg` | `#FFFFFF` |
 | `ink` | `#0F1736` |
-| `brand` | `#234197` (JustNaik blue): checked boxes, kicker |
+| `brand` | `#234197` (JustNaik blue): checked boxes |
 | `signal` | `#FCEC64` (JustNaik yellow): + button, count badge, snackbar action text |
 | `muted` | `#A3A9BB`: completed titles |
 | `line` | `#C3C9DA`: checkbox border |
 | `danger` | `#D93A3A`: swipe-to-delete background |
 
-- **Type sizes:** kicker 12/800 with 0.14em letter spacing; title 40/800; rows 16/400; badge 13/600 with tabular numbers.
+- **Type sizes:** title 32/800, shrinking to fit one line on narrow phones; rows 16/400; badge 15/800 with tabular numbers; filter tabs 12/800 with 0.14em letter spacing.
 - **Rows and checkboxes:** rows at least 50px tall with no dividers; spacing alone separates them. Checkboxes are 22px rounded squares (radius 6) with a 2.2px border.
 - **+ button:** 56px, radius 16, yellow, with a navy plus. As the tick it stays yellow with a navy check; while blank, it's grey (`inactive` `#E3E6EE`) with a `muted` check. Icons fade in when the button changes role.
 - **Snackbar:** ink background, white text, yellow action.
-- **Filter tabs:** kicker type (12/800, 0.14em); the selected tab is `ink` with a 2px `signal` underline, the others `muted`. Each tab has a 48dp touch target; `accessibilityRole="tab"` with `accessibilityState={{ selected }}`.
+- **Filter tabs:** the selected tab is `ink` with a 2px `signal` underline, the others `muted`. Each tab has a 48dp touch target; `accessibilityRole="tab"` with `accessibilityState={{ selected }}`.
 - **Row being edited:** same layout as the draft row, so the title doesn't shift when it turns into an input.
 - **Motion:** spring-based. Rows animate in and out with Reanimated `entering` and `exiting`; remaining rows slide into place via `Animated.FlatList`'s `itemLayoutAnimation`. Everything respects reduce-motion.
 - **Light theme only** (`userInterfaceStyle: "light"`), with a dark status bar.
