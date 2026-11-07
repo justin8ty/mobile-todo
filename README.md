@@ -1,6 +1,6 @@
 # JustNaik Todo
 
-A React Native to-do app built with Expo SDK 58 and TypeScript, using the [JSONPlaceholder](https://jsonplaceholder.typicode.com) API. Tested on Android through Expo Go.
+A React Native to-do app built with Expo SDK 58 and TypeScript, using the [JSONPlaceholder](https://jsonplaceholder.typicode.com) API. Tested on Android through Expo Go. AsyncStorage is implemented.
 
 ## Install the APK
 
@@ -35,7 +35,7 @@ pnpm start
 - **Delete:** swipe a task left. Tap **Undo** within 4 seconds to restore it.
 - **Reload:** pull down on the list to fetch the original tasks again. If you've made changes, you'll be asked to confirm first, since reloading replaces them through the fake API.
 
-Tasks are saved on the device, so they remain after restarting the app.
+Tasks are saved on the device (AsyncStorage), so they remain after restarting the app.
 
 ## API limitations
 
