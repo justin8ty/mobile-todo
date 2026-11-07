@@ -15,7 +15,7 @@ import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { FAB_SIZE, Fab } from '../components/Fab';
 import { FilterPage } from '../components/FilterPage';
-import { FILTERS } from '../components/FilterTabs';
+import { FILTERS, FilterTabs } from '../components/FilterTabs';
 import { Header } from '../components/Header';
 import { LoadingState } from '../components/LoadingState';
 import { Snackbar } from '../components/Snackbar';
@@ -35,11 +35,14 @@ import type { Todo } from '../types';
 const NO_TODOS: Todo[] = [];
 const NO_IDS: ReadonlySet<number> = new Set();
 
-// Remaining rows (and the + button, when the snackbar appears) glide into their new place.
+// Remaining rows glide into their new place.
 const LAYOUT = LinearTransition.springify().damping(20).stiffness(220);
 
 const DRAFT_IN = FadeIn.duration(180);
 const DRAFT_OUT = FadeOut.duration(120);
+
+const BAR_IN = FadeIn.duration(180);
+const BAR_OUT = FadeOut.duration(120);
 
 // Gap between the bottom controls and the safe-area edge or keyboard.
 const BOTTOM_GAP = 16;
@@ -209,11 +212,6 @@ export function TodoScreen() {
     setFilter(next);
   }
 
-  function onFilterChange(next: Filter) {
-    draft.dismiss();
-    changeFilter(next);
-  }
-
   const onDelete = useCallback(
     (id: number) => {
       const removed = deleteTodo(id);
@@ -342,26 +340,30 @@ export function TodoScreen() {
       onStartShouldSetResponder={() => draft.target !== null}
       onResponderRelease={draft.dismiss}
     >
-      <Header todos={todos ?? NO_TODOS} filter={filter} onFilterChange={onFilterChange} />
+      <Header todos={todos ?? NO_TODOS} />
       {body}
-      <Animated.View
-        style={[styles.bottom, liftStyle]}
-      >
-        {state.status === 'ready' && (
-          <Animated.View style={styles.fab}>
-            <Fab
-              mode={fabMode}
-              disabled={fabMode === 'confirm' && !draft.canSubmit}
-              onPress={onFabPress}
-            />
-          </Animated.View>
-        )}
+      <Animated.View style={[styles.bottom, liftStyle]}>
         {snackbar.message !== null && (
           <Snackbar
             key={snackbar.message.id}
             message={snackbar.message}
             onAction={snackbar.pressAction}
           />
+        )}
+        {state.status === 'ready' && (
+          // Within thumb reach; the filters step aside while a form is open, leaving the tick.
+          <View style={styles.bar}>
+            {state.todos.length > 0 && draft.target === null && (
+              <Animated.View entering={BAR_IN} exiting={BAR_OUT} style={styles.filters}>
+                <FilterTabs selected={filter} onSelect={changeFilter} />
+              </Animated.View>
+            )}
+            <Fab
+              mode={fabMode}
+              disabled={fabMode === 'confirm' && !draft.canSubmit}
+              onPress={onFabPress}
+            />
+          </View>
         )}
       </Animated.View>
     </View>
@@ -378,10 +380,17 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingTop: 4,
   },
-  fab: {
-    alignSelf: 'flex-end',
-    marginRight: gutter,
-    marginBottom: 12,
+  bar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 12,
+    // Space above, for the snackbar when it shows.
+    marginTop: 12,
+    paddingHorizontal: gutter,
+  },
+  filters: {
+    flex: 1,
   },
   bottom: {
     position: 'absolute',

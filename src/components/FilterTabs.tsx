@@ -20,15 +20,15 @@ const LABELS: Record<Filter, string> = {
 // Inset between the track and the sliding pill.
 const TRACK_PADDING = 4;
 
-// With the track's padding, each segment is a 48dp target.
-const SEGMENT_HEIGHT = 40;
+// With the track's padding, the control matches the + button's 56dp height.
+const SEGMENT_HEIGHT = 48;
 
 type Props = {
   selected: Filter;
   onSelect: (filter: Filter) => void;
 };
 
-/** A full-width segmented control; the selected segment's pill slides with the list's pages. */
+/** A segmented control beside the + button; the selected segment's pill slides with the list's pages. */
 export function FilterTabs({ selected, onSelect }: Props) {
   const selectedIndex = FILTERS.indexOf(selected);
   const segmentWidth = useSharedValue(0);
@@ -83,17 +83,18 @@ export function FilterTabs({ selected, onSelect }: Props) {
 const styles = StyleSheet.create({
   track: {
     flexDirection: 'row',
-    marginTop: 16,
     padding: TRACK_PADDING,
-    borderRadius: 12,
+    borderRadius: 16,
     backgroundColor: colors.wash,
+    // Floats over the list like the + button.
+    boxShadow: '0 6px 16px rgba(15, 23, 54, 0.12)',
   },
   pill: {
     position: 'absolute',
     top: TRACK_PADDING,
     bottom: TRACK_PADDING,
     left: TRACK_PADDING,
-    borderRadius: 9,
+    borderRadius: 12,
     backgroundColor: colors.bg,
     boxShadow: '0 1px 3px rgba(15, 23, 54, 0.12)',
   },

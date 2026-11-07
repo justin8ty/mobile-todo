@@ -99,9 +99,9 @@ type State =
 
 ## 5. Screen & behaviour
 
-One screen. Layout from top to bottom: header, list (with the draft row above the first task), floating + button, snackbar.
+One screen. Layout from top to bottom: header, list (with the draft row above the first task), snackbar, then a floating bottom bar with the filters and the + button.
 
-**Header.** The title `JustNaik Todo` (one line, no kicker above it) with a yellow badge on the right. The badge shows `N LEFT` (incomplete count across all tasks, whatever the filter), shows `ALL DONE` when every task is complete, and is hidden when the list is empty. Below the title sit the filter tabs.
+**Header.** The title `JustNaik Todo` (one line, no kicker above it) with a yellow badge on the right. The badge shows `N LEFT` (incomplete count across all tasks, whatever the filter), shows `ALL DONE` when every task is complete, and is hidden when the list is empty.
 
 **States**
 | State | UI |
@@ -147,7 +147,7 @@ One screen. Layout from top to bottom: header, list (with the draft row above th
 - While a row is being edited, its swipe and toggle are off.
 
 **Filter**
-- A full-width segmented control under the title: `All`, `Active`, `Done`. The filter is screen state, not persisted; each launch starts on All. The control is hidden while there are no tasks.
+- A segmented control in a bar at the bottom, left of the + button, within thumb reach: `All`, `Active`, `Done`. The bar lifts above the keyboard with the + button; while a form is open, the control fades out and only the tick remains. The filter is screen state, not persisted; each launch starts on All. The control is hidden while there are no tasks.
 - The list shows only matching tasks. A task toggled out of the current filter leaves with its exit animation.
 - Tapping + switches to All first, so the new task is visible.
 - The swipe hint plays on the first visible row. Undo restores by the task's index in the full list.
@@ -158,7 +158,7 @@ One screen. Layout from top to bottom: header, list (with the draft row above th
 
 **Snackbar**
 - One shared component, showing one message at a time; a new message replaces the current one.
-- It appears at the bottom, above the safe-area inset or the keyboard when open (keyboard height from `react-native-keyboard-controller`), and pushes the + button up while visible.
+- It appears just above the bottom bar (the filters and + button), which sits above the safe-area inset or the keyboard when open (keyboard height from `react-native-keyboard-controller`).
 - It hides automatically after 4 seconds and has an optional action button.
 - It's announced to screen readers (`accessibilityLiveRegion="polite"`).
 
@@ -188,7 +188,7 @@ The look is Things 3's calm, expressed through JustNaik's brand and road-sign ty
 - **Rows and checkboxes:** rows at least 50px tall with no dividers; spacing alone separates them. Checkboxes are 22px rounded squares (radius 6) with a 2.2px border.
 - **+ button:** 56px, radius 16, yellow, with a navy plus. As the tick it stays yellow with a navy check; while blank, it's grey (`inactive` `#E3E6EE`) with a `muted` check. Icons fade in when the button changes role.
 - **Snackbar:** ink background, white text, yellow action.
-- **Filter control:** a `wash` (`#F3F4F8`) track (radius 12, 4px padding) split into three equal 40px segments, so each is a 48dp target. A white pill with a soft shadow marks the selected segment and slides to the next one; the selected label is `ink`, the others `subtle` (`#5E6479`). Each segment has `accessibilityRole="tab"` with `accessibilityState={{ selected }}`.
+- **Filter control:** a `wash` (`#F3F4F8`) track (radius 16, 4px padding, the + button's shadow) split into three equal 48px segments, so the control matches the + button's 56px height. A white pill with a soft shadow marks the selected segment and slides to the next one; the selected label is `ink`, the others `subtle` (`#5E6479`). Each segment has `accessibilityRole="tab"` with `accessibilityState={{ selected }}`.
 - **Row being edited:** same layout as the draft row, so the title doesn't shift when it turns into an input.
 - **Motion:** spring-based. Rows animate in and out with Reanimated `entering` and `exiting`; remaining rows slide into place via `Animated.FlatList`'s `itemLayoutAnimation`. Everything respects reduce-motion.
 - **Light theme only** (`userInterfaceStyle: "light"`), with a dark status bar.
@@ -287,6 +287,6 @@ One test per failure mode. Hook tests use `renderHook` with the real reducer and
     - Tradeoff: long-press is hidden (the "Edit" accessibility action covers screen readers); no extra API handling to show.
     - The form opens on release, not when the long press fires. Opening it mid-touch swaps out the view under the finger; on Fabric, the touch end for an unmounted view never reaches JS, so a stale responder swallows the next tap (the tick, which then closes the form unsaved). The haptic still marks the long press.
 
-13. **Filter tabs under the title, not persisted** (over cycling the badge, a persisted filter)
-    - Benefit: visible and one tap; each launch starts on All, so nothing looks missing.
-    - Tradeoff: one more row of header chrome; toggled tasks leave filtered views right away.
+13. **Filter control in the bottom bar beside the + button, not persisted** (over tabs under the title, cycling the badge, a persisted filter)
+    - Benefit: visible, one tap and within thumb reach; each launch starts on All, so nothing looks missing.
+    - Tradeoff: the control covers a strip of the list (bottom padding keeps the last task reachable); it hides while a form is open; toggled tasks leave filtered views right away.

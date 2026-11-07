@@ -2,16 +2,12 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, gutter, typography } from '../theme';
-import { FilterTabs } from './FilterTabs';
 
 import type { Todo } from '../types';
-import type { Filter } from './FilterTabs';
 
 type Props = {
   /** Every task, whatever the filter: the badge counts them all. */
   todos: Todo[];
-  filter: Filter;
-  onFilterChange: (filter: Filter) => void;
 };
 
 /** `null` hides the badge: there is nothing to count. */
@@ -23,7 +19,7 @@ function badgeLabel(todos: Todo[]): string | null {
   return left === 0 ? 'ALL DONE' : `${left} LEFT`;
 }
 
-export function Header({ todos, filter, onFilterChange }: Props) {
+export function Header({ todos }: Props) {
   const insets = useSafeAreaInsets();
   const badge = badgeLabel(todos);
 
@@ -45,7 +41,6 @@ export function Header({ todos, filter, onFilterChange }: Props) {
           </View>
         )}
       </View>
-      {todos.length > 0 && <FilterTabs selected={filter} onSelect={onFilterChange} />}
     </View>
   );
 }
