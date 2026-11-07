@@ -19,7 +19,7 @@ pnpm start
 
 - **View:** the first 10 tasks load from the API. The badge shows how many are left.
 - **Complete:** tap a task to toggle it.
-- **Add:** tap **+**, type a title, then tap **Add** or press return. Empty titles are rejected. If adding fails, tap **Retry** in the message.
+- **Add:** tap **+**, type a title, then tap the **✓** button (where **+** was) or press return. The ✓ stays grey until you type a title. Tap anywhere else to cancel. If adding fails, your text stays; tap **✓** again or **Retry** in the message.
 - **Delete:** swipe a task left. Tap **Undo** within 4 seconds to restore it.
 - **Reload:** pull down on the list to fetch the original tasks again. If you've made changes, you'll be asked to confirm first, since reloading replaces them.
 

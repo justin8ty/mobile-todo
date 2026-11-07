@@ -85,7 +85,8 @@ type State =
 
 **Responsibilities**
 - `useTodos` owns the reducer and the effects: loading at startup and saving. It exposes `state`, `addTodo(title)` (a promise that rejects on failure), `toggleTodo`, `deleteTodo` (returns the removed task and its index), `restoreTodo`, `retry` and `refresh`.
-- Each component keeps its own UI-only state: the draft row's text and saving flag, the snackbar, and whether a refresh is in progress.
+- `useDraft` owns the new-task form: whether it's open, its text and the saving flag. The screen wires it to the draft row and the + button, which both need it.
+- Other UI-only state stays with its owner: the snackbar (`useSnackbar`), the swipe hint (`useSwipeHint`) and whether a refresh is in progress (the screen).
 
 **Startup**
 1. Set `loading`.
@@ -125,13 +126,15 @@ One screen. Layout from top to bottom: header, list (with the draft row above th
 - Once the user swipes any row, `swipeHintSeen:v1` is set and it never plays again.
 - It's skipped when the phone's reduce-motion setting is on.
 
-**Add (draft row)**
-- Tapping the + button scrolls the list to the top and opens a draft row there (`ListHeaderComponent`). The input gets focus and the keyboard opens.
-- The draft row contains a hollow checkbox, a `TextInput` and an **Add** button. The button only appears when `title.trim()` isn't empty. The return key also submits (`returnKeyType="done"`); with a blank title it does nothing.
-- While saving, the Add button shows a spinner, is `disabled` with `accessibilityState={{ busy: true }}`, and further submissions (including the return key) are ignored. The input stays editable, because disabling it closes the keyboard on Android.
-- On success, the task appears at the top. The input clears, keeps focus, and the draft stays open for the next task.
-- On failure, a snackbar shows "Couldn't add task · RETRY" and the text stays in the input. RETRY submits the input's current text, trimmed; if that is blank, it does nothing.
-- If the input loses focus while empty, the draft row closes. Tapping + while the draft is open focuses the input. The + button sets a flag in `onPressIn` so the input's blur doesn't close the draft first (which would make the keyboard bounce).
+**Add (draft row + tick button)**
+- Tapping the + button scrolls the list to the top and opens a draft row there (`ListHeaderComponent`): a hollow checkbox and a `TextInput`. The input gets focus and the keyboard opens.
+- While the draft is open, the + button becomes a tick button that submits it. The tick is grey and inert while `title.trim()` is empty. The return key also submits (`returnKeyType="done"`, `submitBehavior="submit"`); with a blank title it does nothing.
+- While saving, the button shows a spinner with `accessibilityState={{ busy: true }}`, and further submissions (including the return key) are ignored. The input keeps focus, so the keyboard stays up.
+- On success, the task appears at the top, the draft closes and the button returns to +. The next task needs another tap on +.
+- On failure, a snackbar shows "Couldn't add task · RETRY". The draft stays open with its text, and the button returns to an active tick. RETRY resubmits the title that failed.
+- Tapping or scrolling anywhere else closes the draft and discards its text: a tap in the list (a row tap only closes it, without toggling), on the header, a drag of the list, or Android's back button. Taps on the button and snackbar don't count.
+- Dismissing while saving closes the draft, but the request still finishes and the button keeps its spinner until then.
+- How dismissal is detected: the input's `onBlur` closes the draft. The list uses `keyboardShouldPersistTaps="never"`, so list taps blur it. The screen's root view claims taps nothing else handles (`onStartShouldSetResponder`). The draft row blurs its input on `keyboardDidHide`, because Android's back button hides the keyboard without blurring. The inert tick still takes its touch rather than being `disabled`, because a disabled `Pressable` lets the tap fall through to the root and close the draft.
 
 **Pull-to-refresh** (list and empty state)
 - If `hasLocalChanges` is true, an Alert asks first: "Reload tasks?" / "This replaces your changes with the original tasks from the server." with Cancel and Reload. Cancel stops the spinner and changes nothing.
@@ -145,10 +148,10 @@ One screen. Layout from top to bottom: header, list (with the draft row above th
 
 **Mobile details**
 - `SafeAreaProvider`, with insets applied to the + button and snackbar (Android draws edge-to-edge).
-- On the list: `keyboardShouldPersistTaps="handled"` and `keyboardDismissMode="on-drag"`.
+- On the list: `keyboardShouldPersistTaps="never"` and `keyboardDismissMode="on-drag"` (see Add).
 - Touch targets at least 48dp, with `hitSlop` on small controls.
 - Pressed feedback on everything tappable.
-- Accessibility labels: rows use `accessibilityRole="checkbox"` with `accessibilityState={{ checked }}` and the title as the label. The + button is labelled "Add task".
+- Accessibility labels: rows use `accessibilityRole="checkbox"` with `accessibilityState={{ checked }}` and the title as the label. The + button is labelled "Add task", the tick "Save task" (`disabled` while blank), and the spinner "Saving task".
 
 ## 6. Visual design: "Transit signage"
 
@@ -167,7 +170,7 @@ The look is Things 3's calm, expressed through JustNaik's brand and road-sign ty
 
 - **Type sizes:** kicker 12/800 with 0.14em letter spacing; title 40/800; rows 16/400; badge 13/600 with tabular numbers.
 - **Rows and checkboxes:** rows at least 50px tall with no dividers; spacing alone separates them. Checkboxes are 22px rounded squares (radius 6) with a 2.2px border.
-- **+ button:** 56px, radius 16, yellow, with a navy plus.
+- **+ button:** 56px, radius 16, yellow, with a navy plus. As the tick it stays yellow with a navy check; while blank, it's grey (`inactive` `#E3E6EE`) with a `muted` check. Icons fade in when the button changes role.
 - **Snackbar:** ink background, white text, yellow action.
 - **Motion:** spring-based. Rows animate in and out with Reanimated `entering` and `exiting`; remaining rows slide into place via `Animated.FlatList`'s `itemLayoutAnimation`. Everything respects reduce-motion.
 - **Light theme only** (`userInterfaceStyle: "light"`), with a dark status bar.
@@ -181,12 +184,14 @@ src/
   storage/todos.ts           load, save (+ swipe-hint flag)
   state/todosReducer.ts      State, Action, reducer (pure)
   hooks/useTodos.ts          reducer + load/save effects + async actions
+  hooks/useDraft.ts          new-task form: open, text, saving, submit, dismiss
   hooks/useSnackbar.ts
+  hooks/useSwipeHint.ts
   screens/TodoScreen.tsx     picks the state view, wires list, + button, snackbar
   components/
     Header.tsx  TodoRow.tsx  DraftRow.tsx  Checkbox.tsx
     Fab.tsx  Snackbar.tsx  LoadingState.tsx  ErrorState.tsx  EmptyState.tsx
-  theme.ts  types.ts
+  haptics.ts  theme.ts  types.ts
 ```
 
 ## 8. Tests
@@ -205,6 +210,8 @@ One test per failure mode. Hook tests use `renderHook` with the real reducer and
 | 8 | Retry after an error never recovers | Hook |
 | 9 | Failed add changes the list or doesn't reject | Hook |
 | 10 | Save during loading overwrites storage with an empty list | Hook |
+| 11 | Submitting twice while saving adds the task twice, or the draft stays open after success | Hook (`useDraft` + `useTodos`) |
+| 12 | A failed add loses the draft's text, or RETRY doesn't add the failed title | Hook (`useDraft` + `useTodos`) |
 
 ## 9. Deliverables
 
@@ -233,13 +240,12 @@ One test per failure mode. Hook tests use `renderHook` with the real reducer and
    - Benefit: clean rows; mobile convention; accidental deletes are recoverable.
    - Tradeoff: discoverability depends on the hint; custom gesture code.
 
-6. **+ button opens a draft row at the top, Things-style** (over permanent input, bottom-docked input)
-   - Benefit: input never sits under the keyboard; new tasks appear where the user is looking.
-   - Tradeoff: the form is hidden until + is tapped; focus/blur edge cases.
+6. **+ button opens a draft row at the top, Things-style; the same button becomes the tick that submits it, and the draft closes after each add or when the user taps elsewhere** (over permanent input, bottom-docked input, inline Add button, staying open for the next task)
+   - Benefit: input never sits under the keyboard; new tasks appear where the user is looking; one button in one place adds a task, and the draft only lives while the user is adding.
+   - Tradeoff: the form is hidden until + is tapped; adding several tasks takes a + tap each; a stray tap discards the text; several focus and dismissal edge cases to handle.
 
-7. **Blank title: Add hidden, return key does nothing** (over inline error, Alert)
-   - Benefit: native convention; nothing to dismiss.
-   - Tradeoff: rejection is silent.
+7. **Blank title: tick button greyed out and inert, return key does nothing** (over inline error, Alert)
+   - Benefit: native convention; the disabled state shows why nothing happens; nothing to dismiss.
 
 8. **One snackbar for Undo, add failure and refresh failure** (over Alert, inline errors)
    - Benefit: non-blocking; Android-native; one component for three cases.
@@ -252,6 +258,6 @@ One test per failure mode. Hook tests use `renderHook` with the real reducer and
 10. **Swipe hint repeats each launch until the first swipe** (over once ever)
     - Benefit: users who missed it get another chance to learn swipe-to-delete.
 
-11. **Tests cover the reducer and hook only; React Native Testing Library just for `renderHook`** (over component tests, or moving hook logic into plain functions)
-    - Benefit: tests target the data-loss and ID failure modes; the hook is tested as shipped; no Reanimated or Gesture Handler mocking.
-    - Tradeoff: UI rules (blank-title rejection, disabled while saving) are checked manually.
+11. **Tests cover the reducer and hooks only; React Native Testing Library just for `renderHook`** (over component tests, or moving hook logic into plain functions)
+    - Benefit: tests target the data-loss, ID and submission failure modes; the hooks are tested as shipped; no Reanimated or Gesture Handler mocking.
+    - Tradeoff: UI rules (blank-title tick state, dismissal by tapping elsewhere) are checked manually.
