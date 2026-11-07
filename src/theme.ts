@@ -32,9 +32,9 @@ export const fonts = {
 } as const;
 
 export const typography = {
-  kicker: { fontFamily: fonts.extrabold, fontSize: 12, lineHeight: 16, letterSpacing: 12 * 0.14 },
   title: { fontFamily: fonts.extrabold, fontSize: 32, lineHeight: 38 },
   row: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 22 },
+  segment: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 20 },
   badge: {
     fontFamily: fonts.extrabold,
     fontSize: 15,

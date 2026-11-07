@@ -53,8 +53,7 @@ export function Header({ todos, filter, onFilterChange }: Props) {
 const styles = StyleSheet.create({
   header: {
     paddingHorizontal: gutter,
-    // The filter tabs' 48dp targets already leave room below them.
-    paddingBottom: 4,
+    paddingBottom: 12,
     backgroundColor: colors.bg,
   },
   titleLine: {

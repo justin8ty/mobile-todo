@@ -1,133 +1,116 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { colors, pageTiming, typography } from '../theme';
 
-import type { LayoutChangeEvent, LayoutRectangle } from 'react-native';
+import type { LayoutChangeEvent } from 'react-native';
 
 export type Filter = 'all' | 'active' | 'done';
 
-/** Tab order, left to right. Pages slide in the direction of this order. */
+/** Segment order, left to right. Pages slide in the direction of this order. */
 export const FILTERS: readonly Filter[] = ['all', 'active', 'done'];
 
-// Lets the first tab's label line up with the title while keeping a 48dp target.
-const TAB_PADDING = 10;
+const LABELS: Record<Filter, string> = {
+  all: 'All',
+  active: 'Active',
+  done: 'Done',
+};
 
-const INDICATOR_HEIGHT = 2;
+// Inset between the track and the sliding pill.
+const TRACK_PADDING = 4;
 
-// Distance from the tab's bottom edge to the indicator, and from the indicator to the label.
-const INDICATOR_INSET = 10;
-const INDICATOR_GAP = 5;
-
-// Trailing letter spacing would push the indicator past the last letter.
-const LABEL_SPACING = typography.kicker.letterSpacing;
+// With the track's padding, each segment is a 48dp target.
+const SEGMENT_HEIGHT = 40;
 
 type Props = {
   selected: Filter;
   onSelect: (filter: Filter) => void;
 };
 
+/** A full-width segmented control; the selected segment's pill slides with the list's pages. */
 export function FilterTabs({ selected, onSelect }: Props) {
   const selectedIndex = FILTERS.indexOf(selected);
-  const layouts = useRef<(LayoutRectangle | undefined)[]>([]);
-  const placed = useRef(false);
-  const indicatorX = useSharedValue(0);
-  const indicatorWidth = useSharedValue(0);
-
-  /** Slides the indicator under tab `index`; the first placement doesn't animate. */
-  const moveIndicator = useCallback(
-    (index: number) => {
-      const layout = layouts.current[index];
-
-      if (layout === undefined) return;
-
-      const x = layout.x + TAB_PADDING;
-      const width = layout.width - TAB_PADDING * 2 - LABEL_SPACING;
-
-      if (!placed.current) {
-        placed.current = true;
-        indicatorX.value = x;
-        indicatorWidth.value = width;
-
-        return;
-      }
-
-      indicatorX.value = withTiming(x, pageTiming);
-      indicatorWidth.value = withTiming(width, pageTiming);
-    },
-    [indicatorX, indicatorWidth],
-  );
+  const segmentWidth = useSharedValue(0);
+  // Animated position of the pill, in segments.
+  const position = useSharedValue(selectedIndex);
 
   useEffect(() => {
-    moveIndicator(selectedIndex);
-  }, [selectedIndex, moveIndicator]);
+    position.value = withTiming(selectedIndex, pageTiming);
+  }, [selectedIndex, position]);
 
-  function onTabLayout(index: number, event: LayoutChangeEvent) {
-    layouts.current[index] = event.nativeEvent.layout;
-
-    if (index === selectedIndex) moveIndicator(index);
+  function onTrackLayout(event: LayoutChangeEvent) {
+    segmentWidth.value = (event.nativeEvent.layout.width - TRACK_PADDING * 2) / FILTERS.length;
   }
 
-  const indicatorStyle = useAnimatedStyle(() => ({
-    width: indicatorWidth.value,
-    transform: [{ translateX: indicatorX.value }],
+  const pillStyle = useAnimatedStyle(() => ({
+    width: segmentWidth.value,
+    transform: [{ translateX: position.value * segmentWidth.value }],
   }));
 
   return (
-    <View style={styles.tabs} accessibilityRole="tablist">
-      {FILTERS.map((filter, index) => {
+    <View style={styles.track} onLayout={onTrackLayout} accessibilityRole="tablist">
+      <Animated.View style={[styles.pill, pillStyle]} />
+      {FILTERS.map((filter) => {
         const isSelected = filter === selected;
 
         return (
           <Pressable
             key={filter}
             onPress={() => onSelect(filter)}
-            onLayout={(event) => onTabLayout(index, event)}
             accessibilityRole="tab"
             accessibilityState={{ selected: isSelected }}
-            style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
+            style={styles.segment}
           >
-            <Text style={[styles.label, isSelected && styles.labelSelected]}>
-              {filter.toUpperCase()}
-            </Text>
+            {({ pressed }) => (
+              <Text
+                style={[
+                  styles.label,
+                  isSelected && styles.labelSelected,
+                  pressed && !isSelected && styles.labelPressed,
+                ]}
+              >
+                {LABELS[filter]}
+              </Text>
+            )}
           </Pressable>
         );
       })}
-      <Animated.View style={[styles.indicator, indicatorStyle]} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  tabs: {
+  track: {
     flexDirection: 'row',
-    gap: 8,
-    marginLeft: -TAB_PADDING,
+    marginTop: 16,
+    padding: TRACK_PADDING,
+    borderRadius: 12,
+    backgroundColor: colors.wash,
   },
-  tab: {
-    minWidth: 48,
-    minHeight: 48,
-    // Labels sit on a shared baseline above the indicator, whatever the font scale.
-    justifyContent: 'flex-end',
-    paddingHorizontal: TAB_PADDING,
-    paddingBottom: INDICATOR_INSET + INDICATOR_HEIGHT + INDICATOR_GAP,
+  pill: {
+    position: 'absolute',
+    top: TRACK_PADDING,
+    bottom: TRACK_PADDING,
+    left: TRACK_PADDING,
+    borderRadius: 9,
+    backgroundColor: colors.bg,
+    boxShadow: '0 1px 3px rgba(15, 23, 54, 0.12)',
   },
-  pressed: {
-    opacity: 0.55,
+  segment: {
+    flex: 1,
+    height: SEGMENT_HEIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   label: {
-    ...typography.kicker,
-    color: colors.muted,
+    ...typography.segment,
+    color: colors.subtle,
   },
   labelSelected: {
     color: colors.ink,
   },
-  indicator: {
-    position: 'absolute',
-    left: 0,
-    bottom: INDICATOR_INSET,
-    height: INDICATOR_HEIGHT,
-    backgroundColor: colors.signal,
+  labelPressed: {
+    opacity: 0.55,
   },
 });

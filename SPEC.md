@@ -147,7 +147,7 @@ One screen. Layout from top to bottom: header, list (with the draft row above th
 - While a row is being edited, its swipe and toggle are off.
 
 **Filter**
-- Three tabs under the title: `ALL`, `ACTIVE`, `DONE`. The filter is screen state, not persisted; each launch starts on All. The tabs are hidden while there are no tasks.
+- A full-width segmented control under the title: `All`, `Active`, `Done`. The filter is screen state, not persisted; each launch starts on All. The control is hidden while there are no tasks.
 - The list shows only matching tasks. A task toggled out of the current filter leaves with its exit animation.
 - Tapping + switches to All first, so the new task is visible.
 - The swipe hint plays on the first visible row. Undo restores by the task's index in the full list.
@@ -184,11 +184,11 @@ The look is Things 3's calm, expressed through JustNaik's brand and road-sign ty
 | `line` | `#C3C9DA`: checkbox border |
 | `danger` | `#D93A3A`: swipe-to-delete background |
 
-- **Type sizes:** title 32/800, shrinking to fit one line on narrow phones; rows 16/400; badge 15/800 with tabular numbers; filter tabs 12/800 with 0.14em letter spacing.
+- **Type sizes:** title 32/800, shrinking to fit one line on narrow phones; rows 16/400; badge 15/800 with tabular numbers; filter segments 15/600.
 - **Rows and checkboxes:** rows at least 50px tall with no dividers; spacing alone separates them. Checkboxes are 22px rounded squares (radius 6) with a 2.2px border.
 - **+ button:** 56px, radius 16, yellow, with a navy plus. As the tick it stays yellow with a navy check; while blank, it's grey (`inactive` `#E3E6EE`) with a `muted` check. Icons fade in when the button changes role.
 - **Snackbar:** ink background, white text, yellow action.
-- **Filter tabs:** the selected tab is `ink` with a 2px `signal` underline, the others `muted`. Each tab has a 48dp touch target; `accessibilityRole="tab"` with `accessibilityState={{ selected }}`.
+- **Filter control:** a `wash` (`#F3F4F8`) track (radius 12, 4px padding) split into three equal 40px segments, so each is a 48dp target. A white pill with a soft shadow marks the selected segment and slides to the next one; the selected label is `ink`, the others `subtle` (`#5E6479`). Each segment has `accessibilityRole="tab"` with `accessibilityState={{ selected }}`.
 - **Row being edited:** same layout as the draft row, so the title doesn't shift when it turns into an input.
 - **Motion:** spring-based. Rows animate in and out with Reanimated `entering` and `exiting`; remaining rows slide into place via `Animated.FlatList`'s `itemLayoutAnimation`. Everything respects reduce-motion.
 - **Light theme only** (`userInterfaceStyle: "light"`), with a dark status bar.
