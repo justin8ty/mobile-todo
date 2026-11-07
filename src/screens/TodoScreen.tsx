@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, RefreshControl, StyleSheet, View } from 'react-native';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
-import Animated, { LinearTransition, useAnimatedStyle } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, LinearTransition, useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DraftRow } from '../components/DraftRow';
@@ -12,6 +12,7 @@ import { Header } from '../components/Header';
 import { LoadingState } from '../components/LoadingState';
 import { Snackbar } from '../components/Snackbar';
 import { TodoRow } from '../components/TodoRow';
+import { tapHaptic } from '../haptics';
 import { useDraft } from '../hooks/useDraft';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { useSwipeHint } from '../hooks/useSwipeHint';
@@ -28,6 +29,9 @@ const NO_IDS: ReadonlySet<number> = new Set();
 
 // Remaining rows (and the + button, when the snackbar appears) glide into their new place.
 const LAYOUT = LinearTransition.springify().damping(20).stiffness(220);
+
+const DRAFT_IN = FadeIn.duration(180);
+const DRAFT_OUT = FadeOut.duration(120);
 
 // Gap between the bottom controls and the safe-area edge or keyboard.
 const BOTTOM_GAP = 16;
@@ -64,7 +68,9 @@ function useInsertedIds(todos: Todo[] | null): ReadonlySet<number> {
 }
 
 export function TodoScreen() {
-  const { state, retry, refresh, addTodo, toggleTodo, deleteTodo, restoreTodo } = useTodos();
+  const { state, retry, refresh, addTodo, toggleTodo, editTodo, deleteTodo, restoreTodo } =
+    useTodos();
+
   const snackbar = useSnackbar();
   const insets = useSafeAreaInsets();
   const keyboard = useReanimatedKeyboardAnimation();
@@ -138,12 +144,13 @@ export function TodoScreen() {
     [show],
   );
 
-  const draft = useDraft(addTodo, onAdded, onAddFailed);
+  const draft = useDraft(addTodo, editTodo, onAdded, onAddFailed);
+  const { startEdit } = draft;
 
   let fabMode: FabMode = 'add';
 
   if (draft.saving) fabMode = 'saving';
-  else if (draft.open) fabMode = 'confirm';
+  else if (draft.target !== null) fabMode = 'confirm';
 
   function onFabPress() {
     if (fabMode === 'confirm') {
@@ -153,8 +160,15 @@ export function TodoScreen() {
     }
 
     listRef.current?.scrollToOffset({ offset: 0, animated: true });
-    draft.start();
+    draft.startNew();
   }
+
+  const onEdit = useCallback(
+    (id: number, title: string) => {
+      if (startEdit(id, title)) tapHaptic();
+    },
+    [startEdit],
+  );
 
   const onDelete = useCallback(
     (id: number) => {
@@ -171,18 +185,46 @@ export function TodoScreen() {
     [deleteTodo, restoreTodo, show],
   );
 
+  const { editingId, title: draftTitle, changeTitle, submit, dismiss: dismissDraft } = draft;
+
   const renderTodo: ListRenderItem<Todo> = useCallback(
     ({ item }) => (
       <TodoRow
         todo={item}
         onToggle={toggleTodo}
         onDelete={onDelete}
+        onEdit={onEdit}
         onSwipe={onSwiped}
         hintKey={hint?.id === item.id ? hint.key : null}
         animateIn={insertedIds.has(item.id)}
+        editor={
+          item.id === editingId ? (
+            <DraftRow
+              title={draftTitle}
+              checked={item.completed}
+              placeholder="Task title"
+              label="Task title"
+              onChangeTitle={changeTitle}
+              onSubmit={submit}
+              onDismiss={dismissDraft}
+            />
+          ) : null
+        }
       />
     ),
-    [toggleTodo, onDelete, onSwiped, hint, insertedIds],
+    [
+      toggleTodo,
+      onDelete,
+      onEdit,
+      onSwiped,
+      hint,
+      insertedIds,
+      editingId,
+      draftTitle,
+      changeTitle,
+      submit,
+      dismissDraft,
+    ],
   );
 
   // Sits above the keyboard when open (its height is negative), else above the safe area.
@@ -210,13 +252,18 @@ export function TodoScreen() {
           keyExtractor={keyOf}
           renderItem={renderTodo}
           ListHeaderComponent={
-            draft.open ? (
-              <DraftRow
-                title={draft.title}
-                onChangeTitle={draft.changeTitle}
-                onSubmit={draft.submit}
-                onDismiss={draft.dismiss}
-              />
+            draft.target?.kind === 'new' ? (
+              <Animated.View entering={DRAFT_IN} exiting={DRAFT_OUT}>
+                <DraftRow
+                  title={draft.title}
+                  checked={false}
+                  placeholder="New task"
+                  label="New task title"
+                  onChangeTitle={changeTitle}
+                  onSubmit={submit}
+                  onDismiss={dismissDraft}
+                />
+              </Animated.View>
             ) : undefined
           }
           ListEmptyComponent={EmptyState}
@@ -246,7 +293,7 @@ export function TodoScreen() {
       style={styles.screen}
       // Taps nothing else handles, such as on the header, dismiss the form. The list handles
       // its own taps through `keyboardShouldPersistTaps`.
-      onStartShouldSetResponder={() => draft.open}
+      onStartShouldSetResponder={() => draft.target !== null}
       onResponderRelease={draft.dismiss}
     >
       <Header todos={state.status === 'ready' ? state.todos : NO_TODOS} />

@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Keyboard, StyleSheet, TextInput } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import { Keyboard, StyleSheet, TextInput, View } from 'react-native';
 
 import { colors, gutter, typography } from '../theme';
 import { Checkbox } from './Checkbox';
@@ -9,15 +8,34 @@ import type { TextInputInstance } from 'react-native';
 
 type Props = {
   title: string;
+  /** The task's completion state; a new task is unchecked. */
+  checked: boolean;
+  /** Shown when the input is empty. */
+  placeholder: string;
+  /** Names the input for screen readers. */
+  label: string;
   onChangeTitle: (text: string) => void;
   onSubmit: () => void;
   /** Called when the input loses focus: the user tapped or scrolled elsewhere. */
   onDismiss: () => void;
 };
 
-/** The new-task row at the top of the list. It's submitted through the tick button or return key. */
-export function DraftRow({ title, onChangeTitle, onSubmit, onDismiss }: Props) {
+/**
+ * The open form's row: the new task at the top of the list, or a task being edited in place.
+ * It's laid out like `TodoRow`, so an edited title doesn't move when it becomes an input.
+ * It's submitted through the tick button or return key.
+ */
+export function DraftRow({
+  title,
+  checked,
+  placeholder,
+  label,
+  onChangeTitle,
+  onSubmit,
+  onDismiss,
+}: Props) {
   const inputRef = useRef<TextInputInstance>(null);
+  const focused = useRef(false);
 
   // Android's back button hides the keyboard but leaves the input focused; treat it as dismissing.
   useEffect(() => {
@@ -38,44 +56,57 @@ export function DraftRow({ title, onChangeTitle, onSubmit, onDismiss }: Props) {
     };
   }, []);
 
+  // An edited title opens with the cursor at its end, ready to append or delete.
+  function onFocus() {
+    if (focused.current) return;
+
+    focused.current = true;
+    inputRef.current?.setSelection(title.length, title.length);
+  }
+
   return (
-    <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(120)} style={styles.row}>
-      <Checkbox checked={false} />
+    <View style={styles.row}>
+      <Checkbox checked={checked} />
       <TextInput
         ref={inputRef}
         value={title}
         onChangeText={onChangeTitle}
         onSubmitEditing={onSubmit}
+        onFocus={onFocus}
         onBlur={onDismiss}
         autoFocus
-        placeholder="New task"
+        // Long titles wrap like they do in `TodoRow`; the return key still submits.
+        multiline
+        placeholder={placeholder}
         placeholderTextColor={colors.muted}
         returnKeyType="done"
         // Keeps focus after the return key, so submitting doesn't count as dismissing.
         submitBehavior="submit"
         cursorColor={colors.brand}
         selectionColor={colors.line}
-        accessibilityLabel="New task title"
+        accessibilityLabel={label}
         style={styles.input}
       />
-    </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  // Matches `TodoRow`'s row and title, so text sits in the same place.
   row: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 14,
     minHeight: 50,
     paddingHorizontal: gutter,
-    paddingVertical: 7,
+    paddingVertical: 14,
+    backgroundColor: colors.bg,
   },
   input: {
     ...typography.row,
     flex: 1,
-    minHeight: 36,
     padding: 0,
+    textAlignVertical: 'top',
     color: colors.ink,
   },
 });

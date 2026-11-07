@@ -19,6 +19,7 @@ import { tapHaptic, thresholdHaptic } from '../haptics';
 import { colors, gutter, typography } from '../theme';
 import { Checkbox } from './Checkbox';
 
+import type { ReactElement } from 'react';
 import type { AccessibilityActionEvent } from 'react-native';
 import type { Todo } from '../types';
 
@@ -37,28 +38,38 @@ const TRASH_SIZE = 22;
 const ENTERING = FadeIn.springify().damping(20).stiffness(220);
 const EXITING = FadeOut.duration(160);
 
-const ACCESSIBILITY_ACTIONS = [{ name: 'delete', label: 'Delete' }];
+const ACCESSIBILITY_ACTIONS = [
+  { name: 'edit', label: 'Edit' },
+  { name: 'delete', label: 'Delete' },
+];
 
 type Props = {
   todo: Todo;
   onToggle: (id: number) => void;
   onDelete: (id: number) => void;
+  /** Asks to edit the task (long-press or the "Edit" accessibility action). */
+  onEdit: (id: number, title: string) => void;
   /** Called when the user starts swiping this row. */
   onSwipe: () => void;
   /** Changing this to a new number plays the swipe hint; `null` means no hint. */
   hintKey: number | null;
   /** Read on mount: whether the row fades in (a new task) or just appears (launch, scrolling). */
   animateIn: boolean;
+  /** The form that replaces the title while this task is edited; `null` otherwise. */
+  editor: ReactElement | null;
 };
 
 export const TodoRow = memo(function TodoRow({
   todo,
   onToggle,
   onDelete,
+  onEdit,
   onSwipe,
   hintKey,
   animateIn,
+  editor,
 }: Props) {
+  const editing = editor !== null;
   const { width } = useWindowDimensions();
   const offset = useSharedValue(0);
   const armed = useSharedValue(false);
@@ -83,6 +94,7 @@ export const TodoRow = memo(function TodoRow({
     // Horizontal intent activates; vertical movement first hands the touch to the list.
     activeOffsetX: [-12, 12],
     failOffsetY: [-10, 10],
+    enabled: !editing,
     onActivate: () => {
       cancelAnimation(offset);
       scheduleOnRN(onSwipe);
@@ -125,8 +137,19 @@ export const TodoRow = memo(function TodoRow({
     onToggle(todo.id);
   }
 
+  function edit() {
+    onEdit(todo.id, todo.title);
+  }
+
   function handleAccessibilityAction(event: AccessibilityActionEvent) {
-    if (event.nativeEvent.actionName === 'delete') onDelete(todo.id);
+    switch (event.nativeEvent.actionName) {
+      case 'edit':
+        edit();
+        break;
+      case 'delete':
+        onDelete(todo.id);
+        break;
+    }
   }
 
   return (
@@ -138,24 +161,30 @@ export const TodoRow = memo(function TodoRow({
       </Animated.View>
       <GestureDetector gesture={pan}>
         <Animated.View style={slideStyle}>
-          <Pressable
-            onPress={toggle}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: todo.completed }}
-            accessibilityLabel={todo.title}
-            accessibilityActions={ACCESSIBILITY_ACTIONS}
-            onAccessibilityAction={handleAccessibilityAction}
-            style={({ pressed }) => [styles.row, pressed && styles.pressed]}
-          >
-            {({ pressed }) => (
-              <>
-                <Checkbox checked={todo.completed} pressed={pressed} />
-                <Text style={[styles.title, todo.completed && styles.completed]}>
-                  {todo.title}
-                </Text>
-              </>
-            )}
-          </Pressable>
+          {/* While editing, the form replaces the row, so tapping can't toggle the task. */}
+          {editing ? (
+            editor
+          ) : (
+            <Pressable
+              onPress={toggle}
+              onLongPress={edit}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: todo.completed }}
+              accessibilityLabel={todo.title}
+              accessibilityActions={ACCESSIBILITY_ACTIONS}
+              onAccessibilityAction={handleAccessibilityAction}
+              style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+            >
+              {({ pressed }) => (
+                <>
+                  <Checkbox checked={todo.completed} pressed={pressed} />
+                  <Text style={[styles.title, todo.completed && styles.completed]}>
+                    {todo.title}
+                  </Text>
+                </>
+              )}
+            </Pressable>
+          )}
         </Animated.View>
       </GestureDetector>
     </Animated.View>

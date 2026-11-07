@@ -31,7 +31,13 @@ async function renderScreen() {
 
   const hook = await renderHook(() => {
     const todos = useTodos();
-    const draft = useDraft(todos.addTodo, () => {}, (retry) => retries.push(retry));
+
+    const draft = useDraft(
+      todos.addTodo,
+      todos.editTodo,
+      () => {},
+      (retry: () => void) => retries.push(retry),
+    );
 
     return { todos, draft };
   });
@@ -61,7 +67,7 @@ test('submitting again while saving adds the task once, then the form closes', a
   const { result } = await renderScreen();
 
   await act(async () => {
-    result.current.draft.start();
+    result.current.draft.startNew();
     result.current.draft.changeTitle('  Buy milk ');
   });
 
@@ -73,7 +79,7 @@ test('submitting again while saving adds the task once, then the form closes', a
   await waitFor(() => expect(result.current.draft.saving).toBe(false));
 
   expect(titles(result.current.todos.state)).toEqual(['Buy milk', 'Task 1']);
-  expect(result.current.draft).toMatchObject({ open: false, title: '' });
+  expect(result.current.draft).toMatchObject({ target: null, title: '' });
 });
 
 test('a failed add keeps the form and its text, and RETRY adds that title', async () => {
@@ -82,7 +88,7 @@ test('a failed add keeps the form and its text, and RETRY adds that title', asyn
   const { result, retries } = await renderScreen();
 
   await act(async () => {
-    result.current.draft.start();
+    result.current.draft.startNew();
     result.current.draft.changeTitle('Buy milk');
   });
 
@@ -90,10 +96,14 @@ test('a failed add keeps the form and its text, and RETRY adds that title', asyn
   await waitFor(() => expect(retries).toHaveLength(1));
 
   expect(titles(result.current.todos.state)).toEqual(['Task 1']);
-  expect(result.current.draft).toMatchObject({ open: true, title: 'Buy milk', saving: false });
+  expect(result.current.draft).toMatchObject({
+    target: { kind: 'new' },
+    title: 'Buy milk',
+    saving: false,
+  });
 
   await act(async () => retries[0]());
-  await waitFor(() => expect(result.current.draft.open).toBe(false));
+  await waitFor(() => expect(result.current.draft.target).toBeNull());
 
   expect(titles(result.current.todos.state)).toEqual(['Buy milk', 'Task 1']);
 });
