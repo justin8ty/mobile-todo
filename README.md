@@ -4,6 +4,8 @@ A React Native to-do app built with Expo SDK 58 and TypeScript, using the [JSONP
 
 Stack: React Native, Expo SDK, TypeScript, (`fetch`, `useReducer` with custom hooks), AsyncStorage, Reanimated, Gesture Handler, Keyboard Controller.
 
+Specification and design decisions (ADRs): [SPEC.md](./SPEC.md).
+
 ## Install the APK
 
 The quickest way to try the app, no setup needed.
@@ -48,3 +50,11 @@ JSONPlaceholder is a fake API that doesn't save writes:
 - Reloading always returns the original 10 tasks, so it replaces any local changes.
 
 This is accepted by the task requirements.
+
+## Dev
+
+```sh
+pnpm lint
+pnpm typecheck
+pnpm test
+```
