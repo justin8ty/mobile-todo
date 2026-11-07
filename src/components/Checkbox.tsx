@@ -5,7 +5,6 @@ import Animated, {
   useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
@@ -16,6 +15,11 @@ const SIZE = 22;
 
 // Length of the check path below, so the dash offset can draw it in from its start.
 const CHECK_LENGTH = 13.1;
+
+// The box dips slightly under the finger: enough to feel, not enough to watch.
+const PRESSED_SCALE = 0.92;
+
+const PRESS_TIMING = { duration: 100, easing: Easing.out(Easing.quad) };
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
@@ -28,13 +32,13 @@ export function Checkbox({ checked, pressed = false }: Props) {
 
   useEffect(() => {
     progress.value = withTiming(checked ? 1 : 0, {
-      duration: checked ? 260 : 160,
+      duration: checked ? 220 : 140,
       easing: Easing.out(Easing.cubic),
     });
   }, [checked, progress]);
 
   const boxStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: withSpring(pressed ? 0.86 : 1, { damping: 14, stiffness: 400 }) }],
+    transform: [{ scale: withTiming(pressed ? PRESSED_SCALE : 1, PRESS_TIMING) }],
   }));
 
   const fillStyle = useAnimatedStyle(() => ({ opacity: Math.min(progress.value * 2, 1) }));

@@ -8,6 +8,7 @@ import Animated, {
   cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withSequence,
   withSpring,
   withTiming,
@@ -16,7 +17,7 @@ import Svg, { Path } from 'react-native-svg';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { tapHaptic, thresholdHaptic } from '../haptics';
-import { colors, gutter, typography } from '../theme';
+import { colors, fade, gutter, settle, typography } from '../theme';
 import { Checkbox } from './Checkbox';
 
 import type { ReactElement } from 'react';
@@ -26,17 +27,26 @@ import type { Todo } from '../types';
 // Fraction of the row width a swipe must pass for releasing to delete.
 const DELETE_THRESHOLD = 0.35;
 
-const SPRING_BACK = { damping: 20, stiffness: 240 };
-
 // How far the swipe hint slides the row to show a sliver of the delete area.
 const HINT_DISTANCE = 48;
 
-const HINT_SLIDE = { duration: 280, easing: Easing.out(Easing.cubic) };
+const HINT_SLIDE = { duration: 240, easing: Easing.out(Easing.cubic) };
+
+// How long the hint holds the sliver open, so it registers before the row settles back.
+const HINT_HOLD_MS = 180;
+
+// A released swipe carries the row the rest of the way off screen.
+const SWIPE_OUT = { duration: 200, easing: Easing.out(Easing.quad) };
 
 const TRASH_SIZE = 22;
 
-const ENTERING = FadeIn.springify().damping(20).stiffness(220);
-const EXITING = FadeOut.duration(160);
+// The trash icon grows slightly once releasing would delete.
+const TRASH_ARMED_SCALE = 1.12;
+
+const TRASH_TIMING = { duration: 140, easing: Easing.out(Easing.quad) };
+
+const ENTERING = FadeIn.duration(fade.in);
+const EXITING = FadeOut.duration(fade.out);
 
 const ACCESSIBILITY_ACTIONS = [
   { name: 'edit', label: 'Edit' },
@@ -84,9 +94,7 @@ export const TodoRow = memo(function TodoRow({
     playedHintKey.current = hintKey;
     offset.value = withSequence(
       withTiming(-HINT_DISTANCE, HINT_SLIDE),
-      withSpring(0, SPRING_BACK),
-      withTiming(-HINT_DISTANCE / 2, HINT_SLIDE),
-      withSpring(0, SPRING_BACK),
+      withDelay(HINT_HOLD_MS, withSpring(0, settle)),
     );
   }, [hintKey, offset]);
 
@@ -111,7 +119,7 @@ export const TodoRow = memo(function TodoRow({
     },
     onDeactivate: (event) => {
       if (armed.value && !event.canceled) {
-        offset.value = withTiming(-width, { duration: 180 }, (finished) => {
+        offset.value = withTiming(-width, SWIPE_OUT, (finished) => {
           if (finished) scheduleOnRN(onDelete, todo.id);
         });
 
@@ -119,7 +127,7 @@ export const TodoRow = memo(function TodoRow({
       }
 
       armed.value = false;
-      offset.value = withSpring(0, SPRING_BACK);
+      offset.value = withSpring(0, settle);
     },
   });
 
@@ -129,7 +137,7 @@ export const TodoRow = memo(function TodoRow({
   const underlayStyle = useAnimatedStyle(() => ({ opacity: offset.value < 0 ? 1 : 0 }));
 
   const trashStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: withSpring(armed.value ? 1.18 : 1, SPRING_BACK) }],
+    transform: [{ scale: withTiming(armed.value ? TRASH_ARMED_SCALE : 1, TRASH_TIMING) }],
   }));
 
   function toggle() {

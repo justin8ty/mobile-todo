@@ -10,7 +10,7 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { thresholdHaptic } from '../haptics';
-import { colors } from '../theme';
+import { colors, settle } from '../theme';
 
 import type { Ref } from 'react';
 import type {
@@ -27,8 +27,6 @@ const REFRESH_HOLD = 64;
 
 // How far the list must be pulled down (after resistance) for releasing to refresh.
 const REFRESH_THRESHOLD = 80;
-
-const SETTLE = { damping: 26, stiffness: 260 };
 
 /**
  * iOS's rubber band: the further past the edge, the less the list follows the finger.
@@ -85,7 +83,7 @@ export function BounceList<T>({ ref, refreshing, onRefresh, ...listProps }: Prop
   useEffect(() => {
     isRefreshing.value = refreshing;
 
-    if (!dragging.value) offset.value = withSpring(refreshing ? REFRESH_HOLD : 0, SETTLE);
+    if (!dragging.value) offset.value = withSpring(refreshing ? REFRESH_HOLD : 0, settle);
   }, [refreshing, isRefreshing, dragging, offset]);
 
   const pan = usePanGesture({
@@ -129,7 +127,7 @@ export function BounceList<T>({ ref, refreshing, onRefresh, ...listProps }: Prop
       dragging.value = false;
       armed.value = false;
       pull.value = 0;
-      offset.value = withSpring(refresh || isRefreshing.value ? REFRESH_HOLD : 0, SETTLE);
+      offset.value = withSpring(refresh || isRefreshing.value ? REFRESH_HOLD : 0, settle);
 
       if (refresh) scheduleOnRN(onRefresh);
     },

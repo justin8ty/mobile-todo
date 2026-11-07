@@ -1,5 +1,3 @@
-import { Easing } from 'react-native-reanimated';
-
 import type { TextStyle } from 'react-native';
 
 export const colors = {
@@ -21,8 +19,17 @@ export const colors = {
 // Horizontal inset shared by the header and rows, so checkboxes line up under the title.
 export const gutter = 24;
 
-// Switching filters: the list pages and the tab indicator move together.
-export const pageTiming = { duration: 280, easing: Easing.out(Easing.cubic) };
+/**
+ * Motion is brief and never overshoots, so it confirms an action without drawing the eye.
+ *
+ * `settle` is a critically damped spring for things moving into place: rows sliding, a swiped row
+ * returning, the list after a pull, the filter pill. Its duration is perceptual; the last pixel or
+ * two take about half as long again.
+ */
+export const settle = { duration: 260, dampingRatio: 1 } as const;
+
+/** Fades for things appearing or leaving in place. Leaving is quicker: it's already been seen. */
+export const fade = { in: 180, out: 140 } as const;
 
 // Family names registered by `useFonts` from @expo-google-fonts/overpass.
 export const fonts = {

@@ -2,7 +2,7 @@ import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
-import { colors } from '../theme';
+import { colors, fade } from '../theme';
 
 export const FAB_SIZE = 56;
 
@@ -16,7 +16,7 @@ type Props = {
   onPress: () => void;
 };
 
-const ICON_IN = FadeIn.duration(140);
+const ICON_IN = FadeIn.duration(fade.in);
 
 export function Fab({ mode, disabled, onPress }: Props) {
   const inactive = mode === 'saving' || disabled;

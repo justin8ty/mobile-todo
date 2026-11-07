@@ -125,7 +125,7 @@ One screen. Layout from top to bottom: header, list (with the draft row above th
 - After a delete, a snackbar shows "Task deleted · UNDO" for 4 seconds. UNDO restores the task at its original index. Only one deletion can be undone at a time, and a newer delete replaces the pending one.
 
 **Swipe hint**
-- The first row slides left 48px to show a sliver of red, springs back, then repeats once at about half the distance.
+- The first row slides left 48px to show a sliver of red, holds briefly, then settles back. It plays once per trigger.
 - On each app launch, it plays about 600ms after the list first shows tasks, and once more on the first task the user adds.
 - Once the user swipes any row, `swipeHintSeen:v1` is set and it never plays again.
 - It's skipped when the phone's reduce-motion setting is on.
@@ -148,7 +148,7 @@ One screen. Layout from top to bottom: header, list (with the draft row above th
 
 **Filter**
 - A segmented control in a bar at the bottom, left of the + button, within thumb reach: `All`, `Active`, `Done`. The bar lifts above the keyboard with the + button; while a form is open, the control fades out and only the tick remains. The filter is screen state, not persisted; each launch starts on All. The control is hidden while there are no tasks.
-- The list shows only matching tasks. A task toggled out of the current filter leaves with its exit animation.
+- The list shows only matching tasks, and switching filters fades the new list in place (no page slide; the pill shows the movement). A task toggled out of the current filter leaves with its exit animation.
 - Tapping + switches to All first, so the new task is visible.
 - The swipe hint plays on the first visible row. Undo restores by the task's index in the full list.
 
@@ -196,7 +196,7 @@ The look is Things 3's calm, expressed through JustNaik's brand and road-sign ty
 - **Snackbar:** ink background, white text, yellow action.
 - **Filter control:** a `wash` (`#F3F4F8`) track (radius 16, 4px padding, the + button's shadow) split into three equal 48px segments, so the control matches the + button's 56px height. A white pill with a soft shadow marks the selected segment and slides to the next one; the selected label is `ink`, the others `subtle` (`#5E6479`). Each segment has `accessibilityRole="tab"` with `accessibilityState={{ selected }}`.
 - **Row being edited:** same layout as the draft row, so the title doesn't shift when it turns into an input.
-- **Motion:** spring-based. Rows animate in and out with Reanimated `entering` and `exiting`; remaining rows slide into place via `Animated.FlatList`'s `itemLayoutAnimation`. Everything respects reduce-motion.
+- **Motion:** brief and quiet, Things-style: it confirms an action without drawing the eye. Shared tokens in `theme.ts`: `settle`, a critically damped spring (no overshoot) for anything moving into place (rows, a released swipe, the list after a pull, the filter pill), and `fade` (180ms in, 140ms out) for things appearing or leaving in place. No bouncy springs and no springs on opacity. Rows fade in and out with Reanimated `entering` and `exiting`; remaining rows slide into place via `Animated.FlatList`'s `itemLayoutAnimation`. A task added from the draft row takes the draft's place without fading in again. A snackbar replacing another crossfades in place instead of rising again. Everything respects reduce-motion.
 - **Light theme only** (`userInterfaceStyle: "light"`), with a dark status bar.
 
 ## 7. Structure
@@ -214,7 +214,7 @@ src/
   screens/TodoScreen.tsx     picks the state view, wires list, + button, snackbar
   components/
     Header.tsx  TodoRow.tsx  DraftRow.tsx  Checkbox.tsx
-    Fab.tsx  Snackbar.tsx  FilterTabs.tsx  FilterPage.tsx  BounceList.tsx
+    Fab.tsx  Snackbar.tsx  FilterTabs.tsx  BounceList.tsx
     LoadingState.tsx  ErrorState.tsx  EmptyState.tsx
   haptics.ts  theme.ts  types.ts
 ```

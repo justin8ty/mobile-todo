@@ -4,7 +4,13 @@ const VISIBLE_MS = 4000;
 
 export type SnackbarAction = { label: string; onPress: () => void };
 
-export type SnackbarMessage = { id: number; text: string; action: SnackbarAction | null };
+export type SnackbarMessage = {
+  id: number;
+  text: string;
+  action: SnackbarAction | null;
+  /** Shown while another message was still up, so it takes that one's place rather than arriving. */
+  replacing: boolean;
+};
 
 /** One message at a time: showing a new one replaces the current one and restarts the timer. */
 export function useSnackbar() {
@@ -25,7 +31,7 @@ export function useSnackbar() {
 
     const id = lastId.current;
 
-    setMessage({ id, text, action });
+    setMessage((current) => ({ id, text, action, replacing: current !== null }));
 
     return id;
   }, []);

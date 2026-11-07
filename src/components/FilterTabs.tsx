@@ -4,18 +4,18 @@ import Animated, {
   interpolateColor,
   useAnimatedStyle,
   useSharedValue,
-  withTiming,
+  withSpring,
 } from 'react-native-reanimated';
 
-import { colors, pageTiming, typography } from '../theme';
+import { colors, settle, typography } from '../theme';
 
 import type { LayoutChangeEvent } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 
 export type Filter = 'all' | 'active' | 'done';
 
-/** Segment order, left to right. Pages slide in the direction of this order. */
-export const FILTERS: readonly Filter[] = ['all', 'active', 'done'];
+/** Segment order, left to right. */
+const FILTERS: readonly Filter[] = ['all', 'active', 'done'];
 
 const LABELS: Record<Filter, string> = {
   all: 'All',
@@ -35,10 +35,10 @@ type Props = {
 };
 
 /**
- * A segmented control beside the + button; the selected segment's pill slides with the list's pages.
+ * A segmented control beside the + button; a pill slides to the selected segment.
  *
  * The pill and label colours run on the UI thread from the moment of the tap, rather than after
- * React renders the new page, which takes a noticeable moment.
+ * React renders the new list, which takes a noticeable moment.
  */
 export function FilterTabs({ selected, onSelect }: Props) {
   const selectedIndex = FILTERS.indexOf(selected);
@@ -52,7 +52,7 @@ export function FilterTabs({ selected, onSelect }: Props) {
     if (index === target.current) return;
 
     target.current = index;
-    position.value = withTiming(index, pageTiming);
+    position.value = withSpring(index, settle);
   }
 
   // Selections made elsewhere, such as the + button switching to All.

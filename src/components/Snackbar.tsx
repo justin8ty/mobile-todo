@@ -1,17 +1,24 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
-import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
+import Animated, { Easing, FadeIn, FadeInDown, FadeOut } from 'react-native-reanimated';
 
-import { colors, typography } from '../theme';
+import { colors, fade, typography } from '../theme';
 
 import type { SnackbarMessage } from '../hooks/useSnackbar';
+
+// Rises a little into place and leaves by fading.
+const ENTERING = FadeInDown.duration(fade.in + 40).easing(Easing.out(Easing.cubic));
+const EXITING = FadeOut.duration(fade.out);
+
+// A message replacing another crossfades in place rather than rising again.
+const REPLACING = FadeIn.duration(fade.in);
 
 type Props = { message: SnackbarMessage; onAction: () => void };
 
 export function Snackbar({ message, onAction }: Props) {
   return (
     <Animated.View
-      entering={FadeInDown.springify().damping(20).stiffness(260)}
-      exiting={FadeOutDown.duration(160)}
+      entering={message.replacing ? REPLACING : ENTERING}
+      exiting={EXITING}
       style={styles.bar}
       accessibilityLiveRegion="polite"
     >

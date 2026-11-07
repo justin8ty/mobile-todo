@@ -1,13 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
-import Animated, {
-  FadeIn,
-  FadeOut,
-  LinearTransition,
-  useAnimatedStyle,
-  useSharedValue,
-} from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, LinearTransition, useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BounceList } from '../components/BounceList';
@@ -15,8 +9,7 @@ import { DraftRow } from '../components/DraftRow';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { FAB_SIZE, Fab } from '../components/Fab';
-import { FilterPage } from '../components/FilterPage';
-import { FILTERS, FilterTabs } from '../components/FilterTabs';
+import { FilterTabs } from '../components/FilterTabs';
 import { Header } from '../components/Header';
 import { LoadingState } from '../components/LoadingState';
 import { Snackbar } from '../components/Snackbar';
@@ -25,7 +18,7 @@ import { useDraft } from '../hooks/useDraft';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { useSwipeHint } from '../hooks/useSwipeHint';
 import { useTodos } from '../hooks/useTodos';
-import { colors, gutter } from '../theme';
+import { colors, fade, gutter, settle } from '../theme';
 
 import type { ReactElement, ReactNode } from 'react';
 import type { FlatList, ListRenderItem } from 'react-native';
@@ -37,13 +30,10 @@ const NO_TODOS: Todo[] = [];
 const NO_IDS: ReadonlySet<number> = new Set();
 
 // Remaining rows glide into their new place.
-const LAYOUT = LinearTransition.springify().damping(20).stiffness(220);
+const LAYOUT = LinearTransition.springify(settle.duration).dampingRatio(settle.dampingRatio);
 
-const DRAFT_IN = FadeIn.duration(180);
-const DRAFT_OUT = FadeOut.duration(120);
-
-const BAR_IN = FadeIn.duration(180);
-const BAR_OUT = FadeOut.duration(120);
+const APPEAR = FadeIn.duration(fade.in);
+const DISAPPEAR = FadeOut.duration(fade.out);
 
 // Gap between the bottom controls and the safe-area edge or keyboard.
 const BOTTOM_GAP = 16;
@@ -71,30 +61,35 @@ function emptyState(todos: Todo[], filter: Filter): ReactElement {
 }
 
 /**
- * IDs in `todos` that weren't in the previous list: tasks just added, restored or refreshed.
+ * IDs in `todos` that weren't in the previous list: tasks just restored, refreshed or added.
  * Only these animate in, not rows mounting at launch or as the list scrolls.
+ *
+ * A task added from the draft row is left out. The draft closes in the same render the task
+ * appears at the top, in the draft's place, so the task is already on screen.
  */
-function useInsertedIds(todos: Todo[] | null): ReadonlySet<number> {
-  const previous = useRef<Todo[] | null>(null);
+function useInsertedIds(todos: Todo[] | null, draftOpen: boolean): ReadonlySet<number> {
+  const previous = useRef({ todos, draftOpen });
 
   useEffect(() => {
-    previous.current = todos;
-  }, [todos]);
+    previous.current = { todos, draftOpen };
+  }, [todos, draftOpen]);
 
   return useMemo(() => {
     const before = previous.current;
 
-    if (todos === null || before === null) return NO_IDS;
+    if (todos === null || before.todos === null) return NO_IDS;
 
-    const known = new Set(before.map((todo) => todo.id));
+    const known = new Set(before.todos.map((todo) => todo.id));
     const inserted = new Set<number>();
 
     for (const todo of todos) {
       if (!known.has(todo.id)) inserted.add(todo.id);
     }
 
+    if (before.draftOpen && !draftOpen && todos.length > 0) inserted.delete(todos[0].id);
+
     return inserted;
-  }, [todos]);
+  }, [todos, draftOpen]);
 }
 
 export function TodoScreen() {
@@ -111,8 +106,6 @@ export function TodoScreen() {
   const undoMessageId = useRef<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<Filter>('all');
-  // Starts at 0 so the first page appears without sliding in.
-  const pageDirection = useSharedValue(0);
 
   const { show, dismiss } = snackbar;
 
@@ -124,8 +117,6 @@ export function TodoScreen() {
   );
 
   const { hint, onTaskAdded, onSwiped } = useSwipeHint(visibleTodos[0]?.id ?? null);
-  // From the full list, so rows shown by switching filters appear without animating in.
-  const insertedIds = useInsertedIds(todos);
 
   async function reload() {
     setRefreshing(true);
@@ -186,6 +177,10 @@ export function TodoScreen() {
 
   const draft = useDraft(addTodo, editTodo, onAdded, onAddFailed);
   const { startEdit } = draft;
+  const newDraftOpen = draft.target?.kind === 'new';
+
+  // From the full list, so rows shown by switching filters appear without animating in.
+  const insertedIds = useInsertedIds(todos, newDraftOpen);
 
   let fabMode: FabMode = 'add';
 
@@ -200,17 +195,9 @@ export function TodoScreen() {
     }
 
     // The new task goes to the top of the full list, so show all of it.
-    changeFilter('all');
+    setFilter('all');
     listRef.current?.scrollToOffset({ offset: 0, animated: true });
     draft.startNew();
-  }
-
-  function changeFilter(next: Filter) {
-    if (next === filter) return;
-
-    // Set before the swap: the leaving page reads it as it unmounts.
-    pageDirection.value = Math.sign(FILTERS.indexOf(next) - FILTERS.indexOf(filter));
-    setFilter(next);
   }
 
   const onDelete = useCallback(
@@ -288,7 +275,9 @@ export function TodoScreen() {
       break;
     case 'ready':
       body = (
-        <FilterPage key={filter} direction={pageDirection}>
+        // Keyed by filter: switching fades the new list in place, with no page slide, since the
+        // filter pill already shows the movement.
+        <Animated.View key={filter} entering={APPEAR} style={styles.page}>
           <BounceList
             ref={listRef}
             refreshing={refreshing}
@@ -298,8 +287,8 @@ export function TodoScreen() {
             keyExtractor={keyOf}
             renderItem={renderTodo}
             ListHeaderComponent={
-              draft.target?.kind === 'new' ? (
-                <Animated.View entering={DRAFT_IN} exiting={DRAFT_OUT}>
+              newDraftOpen ? (
+                <Animated.View entering={APPEAR} exiting={DISAPPEAR}>
                   <DraftRow
                     title={draft.title}
                     checked={false}
@@ -327,7 +316,7 @@ export function TodoScreen() {
               { paddingBottom: insets.bottom + BOTTOM_GAP + FAB_SIZE + 16 },
             ]}
           />
-        </FilterPage>
+        </Animated.View>
       );
       break;
   }
@@ -354,8 +343,8 @@ export function TodoScreen() {
           // Within thumb reach; the filters step aside while a form is open, leaving the tick.
           <View style={styles.bar}>
             {state.todos.length > 0 && draft.target === null && (
-              <Animated.View entering={BAR_IN} exiting={BAR_OUT} style={styles.filters}>
-                <FilterTabs selected={filter} onSelect={changeFilter} />
+              <Animated.View entering={APPEAR} exiting={DISAPPEAR} style={styles.filters}>
+                <FilterTabs selected={filter} onSelect={setFilter} />
               </Animated.View>
             )}
             <Fab
@@ -374,6 +363,9 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.bg,
+  },
+  page: {
+    flex: 1,
   },
   listContent: {
     // Lets `EmptyState` fill the viewport and centre itself.
