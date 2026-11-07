@@ -210,3 +210,37 @@ One test per failure mode. Hook tests use `renderHook` with the real reducer and
 
 - Source code in a GitHub repo.
 - README: setup, usage, API limitations.
+
+## 10. Decisions
+
+1. **`useReducer` + `useTodos` hook** (over TanStack Query, Zustand)
+   - Benefit: pure, testable transitions; contradictory states (loading + error) can't be represented.
+   - Tradeoff: load, error and persistence logic is hand-written.
+
+2. **Local `nextId` counter replaces the server ID**
+   - Benefit: no duplicate keys despite `id: 201`; IDs restored by Undo can't collide.
+   - Tradeoff: local IDs diverge from the server; one more persisted, validated field.
+
+3. **Storage-first startup; API only when nothing is stored**
+   - Benefit: edits survive restarts; relaunch needs no network; an emptied list stays empty.
+   - Tradeoff: after first launch, server data only arrives via pull-to-refresh.
+
+4. **Pull-to-refresh replaces local data, confirming only when `hasLocalChanges`** (over Reset button, merging local changes)
+   - Benefit: native gesture; data loss is explicit; no confirm when nothing is lost.
+   - Tradeoff: a confirm on a casual gesture is unusual; edits can't survive a refresh.
+
+5. **Swipe-only delete with first-run hint, Undo and an accessibility action** (over trash icon, confirm dialog)
+   - Benefit: clean rows; mobile convention; accidental deletes are recoverable.
+   - Tradeoff: discoverability depends on the hint; custom gesture code.
+
+6. **+ button opens a draft row at the top, Things-style** (over permanent input, bottom-docked input)
+   - Benefit: input never sits under the keyboard; new tasks appear where the user is looking.
+   - Tradeoff: the form is hidden until + is tapped; focus/blur edge cases.
+
+7. **Blank title: Add hidden, return key does nothing** (over inline error, Alert)
+   - Benefit: native convention; nothing to dismiss.
+   - Tradeoff: rejection is silent.
+
+8. **One snackbar for Undo, add failure and refresh failure** (over Alert, inline errors)
+   - Benefit: non-blocking; Android-native; one component for three cases.
+   - Tradeoff: custom component that must track the keyboard (`react-native-keyboard-controller`); messages expire after 4s.
