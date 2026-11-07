@@ -12,13 +12,15 @@ import { Header } from '../components/Header';
 import { LoadingState } from '../components/LoadingState';
 import { Snackbar } from '../components/Snackbar';
 import { TodoRow } from '../components/TodoRow';
+import { useDraft } from '../hooks/useDraft';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { useSwipeHint } from '../hooks/useSwipeHint';
 import { useTodos } from '../hooks/useTodos';
 import { colors, gutter } from '../theme';
 
 import type { ReactNode } from 'react';
-import type { FlatList, ListRenderItem, TextInputInstance } from 'react-native';
+import type { FlatList, ListRenderItem } from 'react-native';
+import type { FabMode } from '../components/Fab';
 import type { Todo } from '../types';
 
 const NO_TODOS: Todo[] = [];
@@ -69,11 +71,6 @@ export function TodoScreen() {
   const onRetry = useCallback(() => void retry(), [retry]);
 
   const listRef = useRef<FlatList<Todo>>(null);
-  const draftInputRef = useRef<TextInputInstance>(null);
-  const [draftOpen, setDraftOpen] = useState(false);
-  // Set while the + button is held, so the input's blur doesn't close the draft first
-  // (closing and reopening would make the keyboard bounce).
-  const fabHeld = useRef(false);
   const addFailedMessageId = useRef<number | null>(null);
   const undoMessageId = useRef<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -125,17 +122,6 @@ export function TodoScreen() {
     );
   }
 
-  function openDraft() {
-    listRef.current?.scrollToOffset({ offset: 0, animated: true });
-
-    if (draftOpen) draftInputRef.current?.focus();
-    else setDraftOpen(true);
-  }
-
-  const closeDraftUnlessFabHeld = useCallback(() => {
-    if (!fabHeld.current) setDraftOpen(false);
-  }, []);
-
   const onAdded = useCallback(() => {
     if (addFailedMessageId.current !== null) dismiss(addFailedMessageId.current);
 
@@ -151,6 +137,24 @@ export function TodoScreen() {
     },
     [show],
   );
+
+  const draft = useDraft(addTodo, onAdded, onAddFailed);
+
+  let fabMode: FabMode = 'add';
+
+  if (draft.saving) fabMode = 'saving';
+  else if (draft.open) fabMode = 'confirm';
+
+  function onFabPress() {
+    if (fabMode === 'confirm') {
+      draft.submit();
+
+      return;
+    }
+
+    listRef.current?.scrollToOffset({ offset: 0, animated: true });
+    draft.start();
+  }
 
   const onDelete = useCallback(
     (id: number) => {
@@ -206,18 +210,18 @@ export function TodoScreen() {
           keyExtractor={keyOf}
           renderItem={renderTodo}
           ListHeaderComponent={
-            draftOpen ? (
+            draft.open ? (
               <DraftRow
-                inputRef={draftInputRef}
-                onAdd={addTodo}
-                onAdded={onAdded}
-                onAddFailed={onAddFailed}
-                onBlurEmpty={closeDraftUnlessFabHeld}
+                title={draft.title}
+                onChangeTitle={draft.changeTitle}
+                onSubmit={draft.submit}
+                onDismiss={draft.dismiss}
               />
             ) : undefined
           }
           ListEmptyComponent={EmptyState}
-          keyboardShouldPersistTaps="handled"
+          // While the form is open, a tap anywhere in the list (rows included) only dismisses it.
+          keyboardShouldPersistTaps="never"
           keyboardDismissMode="on-drag"
           refreshControl={
             <RefreshControl
@@ -238,7 +242,13 @@ export function TodoScreen() {
   }
 
   return (
-    <View style={styles.screen}>
+    <View
+      style={styles.screen}
+      // Taps nothing else handles, such as on the header, dismiss the form. The list handles
+      // its own taps through `keyboardShouldPersistTaps`.
+      onStartShouldSetResponder={() => draft.open}
+      onResponderRelease={draft.dismiss}
+    >
       <Header todos={state.status === 'ready' ? state.todos : NO_TODOS} />
       {body}
       <Animated.View
@@ -247,10 +257,9 @@ export function TodoScreen() {
         {state.status === 'ready' && (
           <Animated.View style={styles.fab}>
             <Fab
-              onPress={openDraft}
-              onHoldChange={(held) => {
-                fabHeld.current = held;
-              }}
+              mode={fabMode}
+              disabled={fabMode === 'confirm' && !draft.canSubmit}
+              onPress={onFabPress}
             />
           </Animated.View>
         )}

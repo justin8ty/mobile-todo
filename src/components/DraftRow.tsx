@@ -1,66 +1,42 @@
-import { useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Keyboard, StyleSheet, TextInput } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { colors, gutter, typography } from '../theme';
 import { Checkbox } from './Checkbox';
 
-import type { RefObject } from 'react';
 import type { TextInputInstance } from 'react-native';
 
 type Props = {
-  inputRef: RefObject<TextInputInstance | null>;
-  /** Rejects when the task couldn't be added. */
-  onAdd: (title: string) => Promise<void>;
-  onAdded: () => void;
-  /** `retry` submits whatever the input holds at the time it's called. */
-  onAddFailed: (retry: () => void) => void;
-  onBlurEmpty: () => void;
+  title: string;
+  onChangeTitle: (text: string) => void;
+  onSubmit: () => void;
+  /** Called when the input loses focus: the user tapped or scrolled elsewhere. */
+  onDismiss: () => void;
 };
 
-/** The new-task row at the top of the list. Owns its text and saving state. */
-export function DraftRow({ inputRef, onAdd, onAdded, onAddFailed, onBlurEmpty }: Props) {
-  const [title, setTitle] = useState('');
-  const [saving, setSaving] = useState(false);
+/** The new-task row at the top of the list. It's submitted through the tick button or return key. */
+export function DraftRow({ title, onChangeTitle, onSubmit, onDismiss }: Props) {
+  const inputRef = useRef<TextInputInstance>(null);
 
-  // Refs, not state: the return key, Add and RETRY must see the latest values synchronously.
-  const titleRef = useRef('');
-  const savingRef = useRef(false);
+  // Android's back button hides the keyboard but leaves the input focused; treat it as dismissing.
+  useEffect(() => {
+    // Ignores a hide still in flight from before this row's keyboard opened.
+    let shown = false;
 
-  function changeTitle(text: string) {
-    titleRef.current = text;
-    setTitle(text);
-  }
+    const showing = Keyboard.addListener('keyboardDidShow', () => {
+      shown = true;
+    });
 
-  async function submit() {
-    const submitted = titleRef.current;
-    const trimmed = submitted.trim();
+    const hiding = Keyboard.addListener('keyboardDidHide', () => {
+      if (shown) inputRef.current?.blur();
+    });
 
-    if (trimmed === '' || savingRef.current) return;
-
-    savingRef.current = true;
-    setSaving(true);
-
-    try {
-      await onAdd(trimmed);
-
-      // The input stays editable while saving; keep anything typed in the meantime.
-      if (titleRef.current === submitted) changeTitle('');
-
-      onAdded();
-    } catch {
-      onAddFailed(() => void submit());
-    } finally {
-      savingRef.current = false;
-      setSaving(false);
-    }
-  }
-
-  function handleBlur() {
-    if (titleRef.current.trim() === '') onBlurEmpty();
-  }
-
-  const canSubmit = title.trim() !== '';
+    return () => {
+      showing.remove();
+      hiding.remove();
+    };
+  }, []);
 
   return (
     <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(120)} style={styles.row}>
@@ -68,37 +44,20 @@ export function DraftRow({ inputRef, onAdd, onAdded, onAddFailed, onBlurEmpty }:
       <TextInput
         ref={inputRef}
         value={title}
-        onChangeText={changeTitle}
-        onSubmitEditing={() => void submit()}
-        onBlur={handleBlur}
+        onChangeText={onChangeTitle}
+        onSubmitEditing={onSubmit}
+        onBlur={onDismiss}
         autoFocus
         placeholder="New task"
         placeholderTextColor={colors.muted}
         returnKeyType="done"
-        // Keeps the keyboard open after the return key, ready for the next task.
+        // Keeps focus after the return key, so submitting doesn't count as dismissing.
         submitBehavior="submit"
         cursorColor={colors.brand}
         selectionColor={colors.line}
         accessibilityLabel="New task title"
         style={styles.input}
       />
-      {canSubmit && (
-        <Pressable
-          onPress={() => void submit()}
-          disabled={saving}
-          accessibilityRole="button"
-          accessibilityLabel="Add"
-          accessibilityState={{ busy: saving, disabled: saving }}
-          hitSlop={6}
-          style={({ pressed }) => [styles.add, pressed && styles.addPressed]}
-        >
-          {saving ? (
-            <ActivityIndicator size="small" color={colors.ink} />
-          ) : (
-            <Text style={styles.addLabel}>ADD</Text>
-          )}
-        </Pressable>
-      )}
     </Animated.View>
   );
 }
@@ -117,22 +76,6 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 36,
     padding: 0,
-    color: colors.ink,
-  },
-  add: {
-    height: 36,
-    minWidth: 64,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.signal,
-  },
-  addPressed: {
-    transform: [{ scale: 0.95 }],
-  },
-  addLabel: {
-    ...typography.action,
     color: colors.ink,
   },
 });

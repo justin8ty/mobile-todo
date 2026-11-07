@@ -12,6 +12,8 @@ export const colors = {
   danger: '#D93A3A',
   // Pressed background for full-width rows.
   wash: '#F3F4F8',
+  // Fill for a disabled button that must still read as a button on white.
+  inactive: '#E3E6EE',
 } as const;
 
 // Horizontal inset shared by the header and rows, so checkboxes line up under the title.
