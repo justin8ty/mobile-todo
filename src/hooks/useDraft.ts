@@ -54,15 +54,13 @@ export function useDraft(
 
   /**
    * Opens the form on an existing task, holding its current title. Ignored while a task is still
-   * saving, since the + button can't act as the tick until then. Returns whether it opened.
+   * saving, since the + button can't act as the tick until then.
    */
   const startEdit = useCallback(
-    (id: number, currentTitle: string): boolean => {
-      if (savingRef.current) return false;
+    (id: number, currentTitle: string) => {
+      if (savingRef.current) return;
 
       open({ kind: 'edit', id }, currentTitle);
-
-      return true;
     },
     [open],
   );

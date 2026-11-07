@@ -141,6 +141,28 @@ export const TodoRow = memo(function TodoRow({
     onEdit(todo.id, todo.title);
   }
 
+  // A long press only opens the form once the finger lifts. Swapping the title for the input
+  // mid-touch would unmount the view under the finger, so React Native never sees the touch end
+  // and keeps a stale responder that swallows the next tap (such as on the tick button).
+  const longPressed = useRef(false);
+
+  function onLongPress() {
+    longPressed.current = true;
+    tapHaptic();
+  }
+
+  function onTouchEnd() {
+    if (!longPressed.current) return;
+
+    longPressed.current = false;
+    edit();
+  }
+
+  // A scroll or swipe that takes over after the long press cancels it.
+  function onTouchCancel() {
+    longPressed.current = false;
+  }
+
   function handleAccessibilityAction(event: AccessibilityActionEvent) {
     switch (event.nativeEvent.actionName) {
       case 'edit':
@@ -167,7 +189,9 @@ export const TodoRow = memo(function TodoRow({
           ) : (
             <Pressable
               onPress={toggle}
-              onLongPress={edit}
+              onLongPress={onLongPress}
+              onTouchEnd={onTouchEnd}
+              onTouchCancel={onTouchCancel}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: todo.completed }}
               accessibilityLabel={todo.title}

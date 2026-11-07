@@ -20,7 +20,6 @@ import { Header } from '../components/Header';
 import { LoadingState } from '../components/LoadingState';
 import { Snackbar } from '../components/Snackbar';
 import { TodoRow } from '../components/TodoRow';
-import { tapHaptic } from '../haptics';
 import { useDraft } from '../hooks/useDraft';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { useSwipeHint } from '../hooks/useSwipeHint';
@@ -215,13 +214,6 @@ export function TodoScreen() {
     changeFilter(next);
   }
 
-  const onEdit = useCallback(
-    (id: number, title: string) => {
-      if (startEdit(id, title)) tapHaptic();
-    },
-    [startEdit],
-  );
-
   const onDelete = useCallback(
     (id: number) => {
       const removed = deleteTodo(id);
@@ -245,7 +237,7 @@ export function TodoScreen() {
         todo={item}
         onToggle={toggleTodo}
         onDelete={onDelete}
-        onEdit={onEdit}
+        onEdit={startEdit}
         onSwipe={onSwiped}
         hintKey={hint?.id === item.id ? hint.key : null}
         animateIn={insertedIds.has(item.id)}
@@ -267,7 +259,7 @@ export function TodoScreen() {
     [
       toggleTodo,
       onDelete,
-      onEdit,
+      startEdit,
       onSwiped,
       hint,
       insertedIds,
