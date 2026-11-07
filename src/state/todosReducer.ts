@@ -11,6 +11,7 @@ export type Action =
   | { type: 'loadFailed'; message: string }
   | { type: 'added'; todo: Todo }
   | { type: 'toggled'; id: number }
+  | { type: 'edited'; id: number; title: string }
   | { type: 'deleted'; id: number }
   | { type: 'restored'; todo: Todo; index: number }
   | { type: 'refreshed'; todos: Todo[] };
@@ -56,6 +57,19 @@ export function todosReducer(state: State, action: Action): State {
         ),
         hasLocalChanges: true,
       };
+    case 'edited': {
+      const title = action.title.trim();
+      const current = state.todos.find((todo) => todo.id === action.id);
+
+      if (title === '' || current === undefined || current.title === title) return state;
+
+      return {
+        ...state,
+        todos: state.todos.map((todo) => (todo.id === action.id ? { ...todo, title } : todo)),
+        hasLocalChanges: true,
+      };
+    }
+
     case 'deleted':
       return {
         ...state,

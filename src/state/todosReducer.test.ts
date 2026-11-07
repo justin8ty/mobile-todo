@@ -53,6 +53,7 @@ test('Undo restores the task at its original index', () => {
 test.each<[string, Action]>([
   ['added', { type: 'added', todo: postResponse('A') }],
   ['toggled', { type: 'toggled', id: 1 }],
+  ['edited', { type: 'edited', id: 1, title: 'Renamed' }],
   ['deleted', { type: 'deleted', id: 1 }],
 ])('%s marks local changes, and refreshing clears them', (_name, edit) => {
   const base = loaded([todo(1), todo(2)]);
@@ -60,4 +61,29 @@ test.each<[string, Action]>([
 
   expect(run(base, edit)).toMatchObject({ hasLocalChanges: true });
   expect(run(base, edit, refreshed)).toMatchObject({ hasLocalChanges: false });
+});
+
+describe('edited', () => {
+  const base = loaded([todo(1), todo(2), todo(3)]);
+
+  function titles(state: State): string[] {
+    if (state.status !== 'ready') throw new Error(`Expected ready state, got ${state.status}`);
+
+    return state.todos.map((item) => item.title);
+  }
+
+  test('renames only the edited task, with the title trimmed', () => {
+    const state = run(base, { type: 'edited', id: 2, title: '  Renamed ' });
+
+    expect(titles(state)).toEqual(['Task 1', 'Renamed', 'Task 3']);
+  });
+
+  test.each([
+    ['blank', '   '],
+    ['unchanged', ' Task 2 '],
+  ])('a %s title changes nothing and is not a local change', (_name, title) => {
+    const before = run(base);
+
+    expect(run(base, { type: 'edited', id: 2, title })).toEqual(before);
+  });
 });

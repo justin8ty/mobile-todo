@@ -85,6 +85,11 @@ export function useTodos() {
     dispatch({ type: 'toggled', id });
   }, []);
 
+  /** Local only. A blank or unchanged title is ignored. */
+  const editTodo = useCallback((id: number, title: string) => {
+    dispatch({ type: 'edited', id, title });
+  }, []);
+
   /** Returns what Undo needs to put the task back, or `null` if it isn't in the list. */
   const deleteTodo = useCallback((id: number): RemovedTodo | null => {
     const current = stateRef.current;
@@ -116,5 +121,5 @@ export function useTodos() {
     dispatch({ type: 'refreshed', todos });
   }, []);
 
-  return { state, addTodo, toggleTodo, deleteTodo, restoreTodo, retry, refresh };
+  return { state, addTodo, toggleTodo, editTodo, deleteTodo, restoreTodo, retry, refresh };
 }
